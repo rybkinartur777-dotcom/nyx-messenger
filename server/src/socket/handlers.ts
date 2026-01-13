@@ -3,7 +3,7 @@ import { getDb } from '../models/database.js';
 
 interface OnlineUsers {
     [socketId: string]: {
-        oderId: string;
+        userId: string;
         socketId: string;
     };
 }
@@ -21,7 +21,7 @@ export function setupSocketHandlers(io: Server) {
 
         // User authentication
         socket.on('auth', (userId: string) => {
-            onlineUsers[socket.id] = { oderId: oderId, socketId: socket.id };
+            onlineUsers[socket.id] = { userId: userId, socketId: socket.id };
 
             if (!userSockets[userId]) {
                 userSockets[userId] = [];
@@ -94,7 +94,7 @@ export function setupSocketHandlers(io: Server) {
         socket.on('disconnect', () => {
             const userData = onlineUsers[socket.id];
             if (userData) {
-                const userId = userData.oderId;
+                const userId = userData.userId;
 
                 // Remove from userSockets
                 if (userSockets[userId]) {

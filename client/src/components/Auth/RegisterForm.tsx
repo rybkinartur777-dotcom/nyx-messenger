@@ -36,7 +36,7 @@ export const RegisterForm: React.FC = () => {
 
             // Generate unique ID and key pair
             const userId = cryptoService.generateUserId();
-            const { publicKey, privateKey } = cryptoService.generateKeyPair();
+            const { publicKey, privateKey } = await cryptoService.generateKeyPair();
 
             // Store private key securely (in real app, would use secure storage)
             localStorage.setItem('nyx_private_key', privateKey);

@@ -5,9 +5,10 @@ import { RegisterForm } from './components/Auth/RegisterForm';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { ChatWindow } from './components/Chat/ChatWindow';
 import { AddContactModal } from './components/Contacts/AddContactModal';
+import { socketService } from './socket/socketService';
 
 const App: React.FC = () => {
-    const { isAuthenticated, user, setUser } = useStore();
+    const { isAuthenticated, user } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [showAddContact, setShowAddContact] = useState(false);
 
@@ -21,6 +22,10 @@ const App: React.FC = () => {
                 const publicKey = localStorage.getItem('nyx_public_key');
                 if (privateKey && publicKey) {
                     await cryptoService.loadKeyPair(publicKey, privateKey);
+                }
+
+                if (user?.id) {
+                    socketService.connect(user.id);
                 }
             } catch (err) {
                 console.error('Failed to initialize crypto:', err);

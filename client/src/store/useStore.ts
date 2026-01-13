@@ -35,7 +35,7 @@ interface AppState {
 
 export const useStore = create<AppState>()(
     persist(
-        (set, get) => ({
+        (set) => ({
             // Initial state
             user: null,
             isAuthenticated: false,

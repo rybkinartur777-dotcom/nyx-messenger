@@ -1,12 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
-import { Message } from '../../types';
-import { v4 as uuidv4 } from 'uuid';
+import { socketService } from '../../socket/socketService';
 
 export const ChatWindow: React.FC = () => {
-    const { user, activeChat, messages, addMessage, updateChatLastMessage } = useStore();
+    const { user, activeChat, messages } = useStore();
     const [inputValue, setInputValue] = useState('');
-    const [isTyping, setIsTyping] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const chatMessages = activeChat ? messages[activeChat.id] || [] : [];
@@ -25,32 +23,10 @@ export const ChatWindow: React.FC = () => {
     const handleSend = () => {
         if (!inputValue.trim() || !activeChat || !user) return;
 
-        const newMessage: Message = {
-            id: uuidv4(),
-            chatId: activeChat.id,
-            senderId: user.id,
-            content: inputValue.trim(),
-            timestamp: new Date(),
-            status: 'sent'
-        };
+        // Send message via socket
+        socketService.sendMessage(activeChat.id, user.id, inputValue.trim());
 
-        addMessage(activeChat.id, newMessage);
-        updateChatLastMessage(activeChat.id, newMessage);
         setInputValue('');
-
-        // Simulate reply (for demo purposes)
-        setTimeout(() => {
-            const reply: Message = {
-                id: uuidv4(),
-                chatId: activeChat.id,
-                senderId: 'other-user',
-                content: 'Сообщение получено! 🔐',
-                timestamp: new Date(),
-                status: 'delivered'
-            };
-            addMessage(activeChat.id, reply);
-            updateChatLastMessage(activeChat.id, reply);
-        }, 1500);
     };
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -85,8 +61,8 @@ export const ChatWindow: React.FC = () => {
                 </div>
                 <div className="chat-header-info">
                     <div className="chat-header-name">{activeChat.name || 'Контакт'}</div>
-                    <div className={`chat-header-status ${isTyping ? '' : 'online'}`}>
-                        {isTyping ? 'печатает...' : 'в сети'}
+                    <div className="chat-header-status online">
+                        в сети
                     </div>
                 </div>
                 <div className="encryption-badge">
