@@ -4,7 +4,7 @@ import { Message } from '../types';
 
 class SocketService {
     private socket: Socket | null = null;
-    private serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:4000';
+    private serverUrl = (import.meta as any).env.VITE_SERVER_URL || 'http://localhost:4000';
 
     connect(userId: string) {
         if (this.socket?.connected) return;
@@ -20,7 +20,7 @@ class SocketService {
         });
 
         this.socket.on('message:new', (data: any) => {
-            const { addMessage, updateChatLastMessage, user } = useStore.getState();
+            const { addMessage, updateChatLastMessage } = useStore.getState();
 
             // Handle incoming message
             // In a real app, we would decrypt it here using the private key
@@ -37,7 +37,7 @@ class SocketService {
             updateChatLastMessage(data.chatId, message);
         });
 
-        this.socket.on('message:typing', (data: { chatId: string; userId: string }) => {
+        this.socket.on('message:typing', () => {
             // Can be used to show typing indicator
         });
     }
