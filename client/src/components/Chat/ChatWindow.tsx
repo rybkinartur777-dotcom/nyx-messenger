@@ -90,7 +90,9 @@ export const ChatWindow: React.FC = () => {
                 const reader = new FileReader();
                 reader.onload = () => {
                     const base64 = reader.result as string;
-                    socketService.sendMessage(activeChat.id, user.id!, '[Голосовое сообщение]', 'audio', base64);
+                    if (activeChat && user) {
+                        socketService.sendMessage(activeChat.id, user.id, '[Голосовое сообщение]', 'audio', base64);
+                    }
                 };
                 reader.readAsDataURL(audioBlob);
                 stream.getTracks().forEach(track => track.stop());
