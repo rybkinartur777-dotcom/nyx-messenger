@@ -8,10 +8,40 @@ export const ChatWindow: React.FC = () => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const chatMessages = activeChat ? messages[activeChat.id] || [] : [];
+    const { setMessages } = useStore();
+
+    useEffect(() => {
+        const fetchMessages = async () => {
+            if (!activeChat) return;
+
+            try {
+                const serverUrl = (import.meta as any).env.VITE_SERVER_URL || 'http://localhost:4000';
+                const response = await fetch(`${serverUrl.replace(/\/$/, '')}/api/chats/${activeChat.id}/messages`);
+                const result = await response.json();
+
+                if (result.success) {
+                    // In a real E2E app, we would decrypt messages here
+                    const formattedMessages = result.data.map((m: any) => ({
+                        id: m.id,
+                        chatId: m.chatId,
+                        senderId: m.senderId,
+                        content: m.encryptedContent,
+                        timestamp: new Date(m.timestamp),
+                        status: 'delivered'
+                    }));
+                    setMessages(activeChat.id, formattedMessages);
+                }
+            } catch (err) {
+                console.error('Error fetching messages:', err);
+            }
+        };
+
+        fetchMessages();
+    }, [activeChat?.id, setMessages]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [chatMessages]);
+    }, [chatMessages.length]);
 
     const formatTime = (date: Date) => {
         return new Date(date).toLocaleTimeString('ru-RU', {
