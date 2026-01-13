@@ -31,7 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                     ✕
                 </button>
                 <div className="logo">
-                    <div className="logo-icon">N</div>
+                    <img src="/logo.png" alt="Nyx Logo" style={{ width: '32px', height: '32px', borderRadius: '8px', marginRight: '8px' }} />
                     <span className="logo-text">Nyx</span>
                 </div>
                 <button className="btn btn-ghost" onClick={onAddContact} title="Добавить контакт">

@@ -125,8 +125,8 @@ export const RegisterForm: React.FC = () => {
         <div className="auth-container">
             <div className="auth-card">
                 <div className="auth-logo">
-                    <div className="logo-icon">N</div>
-                    <div className="logo-text">Nyx</div>
+                    <img src="/logo.png" alt="Nyx Logo" style={{ width: '80px', height: '80px', borderRadius: '16px', marginBottom: '16px', boxShadow: '0 0 20px rgba(0, 243, 255, 0.2)' }} />
+                    <div className="logo-text" style={{ fontSize: '2rem' }}>Nyx</div>
                 </div>
 
                 <p className="auth-title">

@@ -122,7 +122,10 @@ export const ChatWindow: React.FC = () => {
                     <button className="btn btn-ghost" onClick={toggleSidebar}>
                         ☰
                     </button>
-                    <div className="logo-text" style={{ fontSize: '1.2rem' }}>Nyx</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <img src="/logo.png" alt="Nyx Logo" style={{ width: '24px', height: '24px', borderRadius: '4px' }} />
+                        <div className="logo-text" style={{ fontSize: '1.2rem' }}>Nyx</div>
+                    </div>
                 </div>
                 <div className="empty-state">
                     <div className="empty-state-icon">🔒</div>
