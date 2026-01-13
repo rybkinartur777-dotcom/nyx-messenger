@@ -15,8 +15,9 @@ export const ChatWindow: React.FC = () => {
             if (!activeChat) return;
 
             try {
-                const serverUrl = (import.meta as any).env.VITE_SERVER_URL || 'http://localhost:4000';
-                const response = await fetch(`${serverUrl.replace(/\/$/, '')}/api/chats/${activeChat.id}/messages`);
+                const baseUrl = (import.meta as any).env.VITE_SERVER_URL || 'https://nyx-messenger-e77j.onrender.com';
+                const serverUrl = baseUrl.replace(/\/$/, '');
+                const response = await fetch(`${serverUrl}/api/chats/${activeChat.id}/messages`);
                 const result = await response.json();
 
                 if (result.success) {

@@ -49,7 +49,7 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
         setIsLoading(true);
 
         try {
-            const baseUrl = (import.meta as any).env.VITE_SERVER_URL || 'http://localhost:4000';
+            const baseUrl = (import.meta as any).env.VITE_SERVER_URL || 'https://nyx-messenger-e77j.onrender.com';
             const serverUrl = baseUrl.replace(/\/$/, '');
             const targetUrl = `${serverUrl}/api/users/${contactId}`;
 

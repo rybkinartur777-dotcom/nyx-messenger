@@ -4,7 +4,7 @@ import { Message } from '../types';
 
 class SocketService {
     private socket: Socket | null = null;
-    private serverUrl = (import.meta as any).env.VITE_SERVER_URL || 'http://localhost:4000';
+    private serverUrl = (import.meta as any).env.VITE_SERVER_URL || 'https://nyx-messenger-e77j.onrender.com';
 
     connect(userId: string) {
         if (this.socket?.connected) return;

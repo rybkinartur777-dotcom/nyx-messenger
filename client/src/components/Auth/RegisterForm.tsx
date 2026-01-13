@@ -42,7 +42,8 @@ export const RegisterForm: React.FC = () => {
             localStorage.setItem('nyx_private_key', privateKey);
 
             // Register on server
-            const serverUrl = (import.meta as any).env.VITE_SERVER_URL || 'http://localhost:4000';
+            const baseUrl = (import.meta as any).env.VITE_SERVER_URL || 'https://nyx-messenger-e77j.onrender.com';
+            const serverUrl = baseUrl.replace(/\/$/, '');
             const response = await fetch(`${serverUrl}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
