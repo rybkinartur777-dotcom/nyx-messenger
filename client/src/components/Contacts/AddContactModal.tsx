@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { Chat } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
+import { socketService } from '../../socket/socketService';
 
 interface AddContactModalProps {
     isOpen: boolean;
@@ -48,14 +49,22 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
         setIsLoading(true);
 
         try {
-            // In a real app, this would verify the ID exists on the server
-            // For demo, we'll just create the contact/chat
+            const serverUrl = (import.meta as any).env.VITE_SERVER_URL || 'http://localhost:4000';
+            const response = await fetch(`${serverUrl}/api/users/${contactId}`);
+            const result = await response.json();
+
+            if (!result.success) {
+                setError('Пользователь не найден');
+                return;
+            }
+
+            const foundUser = result.data;
 
             // Add contact
             addContact({
-                userId: contactId,
-                nickname: contactName || 'Контакт',
-                publicKey: '', // Would be fetched from server
+                userId: foundUser.id,
+                nickname: contactName || foundUser.nickname,
+                publicKey: foundUser.publicKey,
                 addedAt: new Date()
             });
 
@@ -64,18 +73,22 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
                 id: uuidv4(),
                 type: 'private',
                 participants: [user!.id, contactId],
-                name: contactName || contactId,
+                name: contactName || foundUser.nickname,
                 unreadCount: 0,
                 createdAt: new Date()
             };
 
             setChats([...chats, newChat]);
             setActiveChat(newChat);
+
+            // Tell server to join this chat room
+            socketService.joinChat(newChat.id);
+
             onClose();
             setContactId('');
             setContactName('');
         } catch (err) {
-            setError('Ошибка при добавлении контакта');
+            setError('Ошибка при поиске пользователя');
         } finally {
             setIsLoading(false);
         }

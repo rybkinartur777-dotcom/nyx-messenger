@@ -38,10 +38,24 @@ export const RegisterForm: React.FC = () => {
             const userId = cryptoService.generateUserId();
             const { publicKey, privateKey } = await cryptoService.generateKeyPair();
 
-            // Store private key securely (in real app, would use secure storage)
+            // Store private key securely
             localStorage.setItem('nyx_private_key', privateKey);
 
-            // Create user
+            // Register on server
+            const serverUrl = (import.meta as any).env.VITE_SERVER_URL || 'http://localhost:4000';
+            const response = await fetch(`${serverUrl}/api/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: userId, nickname: nickname.trim(), publicKey })
+            });
+
+            const result = await response.json();
+
+            if (!result.success) {
+                throw new Error(result.error || 'Registration failed');
+            }
+
+            // Create user locally
             const user = {
                 id: userId,
                 nickname: nickname.trim(),
@@ -55,8 +69,8 @@ export const RegisterForm: React.FC = () => {
 
             setGeneratedId(userId);
             setUser(user);
-        } catch (err) {
-            setError('Ошибка при регистрации. Попробуйте снова.');
+        } catch (err: any) {
+            setError(err.message || 'Ошибка при регистрации. Попробуйте снова.');
             console.error(err);
         } finally {
             setIsLoading(false);

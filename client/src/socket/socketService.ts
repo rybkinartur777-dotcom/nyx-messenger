@@ -45,12 +45,37 @@ class SocketService {
     sendMessage(chatId: string, senderId: string, content: string) {
         if (!this.socket?.connected) return;
 
-        this.socket.emit('message:send', {
+        const { addMessage, updateChatLastMessage } = useStore.getState();
+
+        const messageData = {
+            id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             chatId,
             senderId,
-            encryptedContent: content, // In a real app, this would be encrypted
-            nonce: 'dummy_nonce'
-        });
+            encryptedContent: content,
+            nonce: 'dummy_nonce',
+            timestamp: new Date().toISOString()
+        };
+
+        // Emit to server
+        this.socket.emit('message:send', messageData);
+
+        // Add to local state immediately for responsiveness
+        const localMessage: Message = {
+            id: messageData.id,
+            chatId: messageData.chatId,
+            senderId: messageData.senderId,
+            content: content,
+            timestamp: new Date(),
+            status: 'sent'
+        };
+
+        addMessage(chatId, localMessage);
+        updateChatLastMessage(chatId, localMessage);
+    }
+
+    joinChat(chatId: string) {
+        if (!this.socket?.connected) return;
+        this.socket.emit('chat:join', chatId);
     }
 
     disconnect() {

@@ -28,15 +28,22 @@ export function setupSocketHandlers(io: Server) {
             }
             userSockets[userId].push(socket.id);
 
-            // Join user's chat rooms
-            const db = getDb();
-            const chats = db.prepare(`
-        SELECT chat_id FROM chat_participants WHERE user_id = ?
-      `).all(userId) as { chat_id: string }[];
+            // Join personal room
+            socket.join(`user:${userId}`);
 
-            chats.forEach(chat => {
-                socket.join(`chat:${chat.chat_id}`);
-            });
+            // Join user's chat rooms from DB
+            const db = getDb();
+            try {
+                const chats = db.prepare(`
+                    SELECT chat_id FROM chat_participants WHERE user_id = ?
+                `).all(userId) as { chat_id: string }[];
+
+                chats.forEach(chat => {
+                    socket.join(`chat:${chat.chat_id}`);
+                });
+            } catch (err) {
+                console.log('No chats found for user or table missing');
+            }
 
             // Broadcast online status
             socket.broadcast.emit('user:online', userId);
