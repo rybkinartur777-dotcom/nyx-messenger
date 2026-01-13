@@ -54,11 +54,13 @@ export function setupSocketHandlers(io: Server) {
         socket.on('message:send', async (data: {
             chatId: string;
             senderId: string;
+            message_type?: string;
             encryptedContent: string;
+            file_url?: string;
             nonce: string;
             replyTo?: string;
         }) => {
-            const { chatId, senderId, encryptedContent, nonce, replyTo } = data;
+            const { chatId, senderId, message_type, encryptedContent, file_url, nonce, replyTo } = data;
             const db = getDb();
 
             // Generate message ID
@@ -67,9 +69,9 @@ export function setupSocketHandlers(io: Server) {
             try {
                 // Save to database
                 await db.run(`
-                    INSERT INTO messages (id, chat_id, sender_id, encrypted_content, nonce, reply_to)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                `, [messageId, chatId, senderId, encryptedContent, nonce, replyTo || null]);
+                    INSERT INTO messages (id, chat_id, sender_id, message_type, encrypted_content, file_url, nonce, reply_to)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                `, [messageId, chatId, senderId, message_type || 'text', encryptedContent, file_url || null, nonce, replyTo || null]);
 
                 // Also make sure they are in the participants table (if not already)
                 await db.run('INSERT OR IGNORE INTO chat_participants (chat_id, user_id) VALUES (?, ?)', [chatId, senderId]);
@@ -82,7 +84,9 @@ export function setupSocketHandlers(io: Server) {
                     id: messageId,
                     chatId,
                     senderId,
+                    message_type: message_type || 'text',
                     encryptedContent,
+                    file_url,
                     nonce,
                     replyTo,
                     timestamp: new Date().toISOString()

@@ -19,6 +19,8 @@ export interface Message {
     chatId: string;
     senderId: string;
     content: string;
+    type: 'text' | 'image' | 'audio' | 'file';
+    fileUrl?: string;
     timestamp: Date;
     status: 'sending' | 'sent' | 'delivered' | 'read';
     replyTo?: string;
@@ -30,6 +32,8 @@ export interface EncryptedMessage {
     chatId: string;
     senderId: string;
     encryptedContent: string;
+    type: 'text' | 'image' | 'audio' | 'file';
+    fileUrl?: string;
     nonce: string;
     timestamp: Date;
     expiresAt?: Date;

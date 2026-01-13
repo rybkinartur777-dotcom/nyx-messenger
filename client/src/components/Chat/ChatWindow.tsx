@@ -5,6 +5,10 @@ import { socketService } from '../../socket/socketService';
 export const ChatWindow: React.FC = () => {
     const { user, activeChat, messages, toggleSidebar } = useStore();
     const [inputValue, setInputValue] = useState('');
+    const [isRecording, setIsRecording] = useState(false);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const chatMessages = activeChat ? messages[activeChat.id] || [] : [];
@@ -21,12 +25,13 @@ export const ChatWindow: React.FC = () => {
                 const result = await response.json();
 
                 if (result.success) {
-                    // In a real E2E app, we would decrypt messages here
                     const formattedMessages = result.data.map((m: any) => ({
                         id: m.id,
                         chatId: m.chatId,
                         senderId: m.senderId,
                         content: m.encryptedContent,
+                        type: m.message_type || 'text',
+                        fileUrl: m.file_url,
                         timestamp: new Date(m.timestamp),
                         status: 'delivered'
                     }));
@@ -53,11 +58,54 @@ export const ChatWindow: React.FC = () => {
 
     const handleSend = () => {
         if (!inputValue.trim() || !activeChat || !user) return;
-
-        // Send message via socket
-        socketService.sendMessage(activeChat.id, user.id, inputValue.trim());
-
+        socketService.sendMessage(activeChat.id, user.id, inputValue.trim(), 'text');
         setInputValue('');
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !activeChat || !user) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            const base64 = reader.result as string;
+            socketService.sendMessage(activeChat.id, user.id, '[Изображение]', 'image', base64);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) audioChunksRef.current.push(e.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64 = reader.result as string;
+                    socketService.sendMessage(activeChat.id, user.id!, '[Голосовое сообщение]', 'audio', base64);
+                };
+                reader.readAsDataURL(audioBlob);
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+        } catch (err) {
+            console.error('Error recording:', err);
+        }
+    };
+
+    const stopRecording = () => {
+        mediaRecorderRef.current?.stop();
+        setIsRecording(false);
     };
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -124,14 +172,21 @@ export const ChatWindow: React.FC = () => {
                             key={msg.id}
                             className={`message ${msg.senderId === user?.id ? 'outgoing' : 'incoming'}`}
                         >
-                            <div className="message-text">{msg.content}</div>
+                            {msg.type === 'image' && msg.fileUrl && (
+                                <img src={msg.fileUrl} alt="Sent" className="message-image" style={{ maxWidth: '100%', borderRadius: '12px', marginBottom: '8px' }} />
+                            )}
+
+                            {msg.type === 'audio' && msg.fileUrl && (
+                                <audio src={msg.fileUrl} controls className="message-audio" style={{ marginBottom: '8px', maxWidth: '100%' }} />
+                            )}
+
+                            {msg.type === 'text' && <div className="message-text">{msg.content}</div>}
+
                             <div className="message-time">
                                 {formatTime(msg.timestamp)}
                                 {msg.senderId === user?.id && (
                                     <span style={{ marginLeft: '4px' }}>
-                                        {msg.status === 'sent' && '✓'}
-                                        {msg.status === 'delivered' && '✓✓'}
-                                        {msg.status === 'read' && '✓✓'}
+                                        ✓✓
                                     </span>
                                 )}
                             </div>
@@ -142,8 +197,15 @@ export const ChatWindow: React.FC = () => {
             </div>
 
             <div className="message-input-container">
-                <button className="btn btn-ghost" title="Прикрепить файл">
-                    📎
+                <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    style={{ display: 'none' }}
+                    onChange={handleImageUpload}
+                />
+                <button className="btn btn-ghost" title="Прикрепить фото" onClick={() => fileInputRef.current?.click()}>
+                    📸
                 </button>
                 <textarea
                     className="message-input"
@@ -153,8 +215,15 @@ export const ChatWindow: React.FC = () => {
                     onKeyPress={handleKeyPress}
                     rows={1}
                 />
-                <button className="btn btn-ghost" title="Голосовое сообщение">
-                    🎤
+                <button
+                    className={`btn btn-ghost ${isRecording ? 'recording-active' : ''}`}
+                    title="Голосовое сообщение"
+                    onMouseDown={startRecording}
+                    onMouseUp={stopRecording}
+                    onTouchStart={startRecording}
+                    onTouchEnd={stopRecording}
+                >
+                    {isRecording ? '🔴' : '🎤'}
                 </button>
                 <button
                     className="btn btn-icon"

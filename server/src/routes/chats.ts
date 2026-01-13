@@ -127,7 +127,9 @@ router.get('/user/:userId', async (req: Request, res: Response) => {
                 lastMessage: lastMessage ? {
                     id: lastMessage.id,
                     senderId: lastMessage.sender_id,
+                    message_type: lastMessage.message_type,
                     encryptedContent: lastMessage.encrypted_content,
+                    file_url: lastMessage.file_url,
                     timestamp: lastMessage.created_at
                 } : null,
                 createdAt: chat.created_at
@@ -176,7 +178,9 @@ router.get('/:chatId/messages', async (req: Request, res: Response) => {
                 id: m.id,
                 chatId: m.chat_id,
                 senderId: m.sender_id,
+                message_type: m.message_type,
                 encryptedContent: m.encrypted_content,
+                file_url: m.file_url,
                 nonce: m.nonce,
                 replyTo: m.reply_to,
                 timestamp: m.created_at

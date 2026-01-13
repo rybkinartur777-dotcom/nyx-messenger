@@ -28,7 +28,9 @@ class SocketService {
                 id: data.id,
                 chatId: data.chatId,
                 senderId: data.senderId,
-                content: data.encryptedContent, // For now, showing as is, will add decryption
+                content: data.encryptedContent,
+                type: data.message_type || 'text',
+                fileUrl: data.file_url,
                 timestamp: new Date(data.timestamp),
                 status: 'delivered'
             };
@@ -42,7 +44,7 @@ class SocketService {
         });
     }
 
-    sendMessage(chatId: string, senderId: string, content: string) {
+    sendMessage(chatId: string, senderId: string, content: string, type: 'text' | 'image' | 'audio' | 'file' = 'text', fileUrl?: string) {
         if (!this.socket?.connected) return;
 
         const { addMessage, updateChatLastMessage } = useStore.getState();
@@ -51,7 +53,9 @@ class SocketService {
             id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             chatId,
             senderId,
+            message_type: type,
             encryptedContent: content,
+            file_url: fileUrl,
             nonce: 'dummy_nonce',
             timestamp: new Date().toISOString()
         };
@@ -65,6 +69,8 @@ class SocketService {
             chatId: messageData.chatId,
             senderId: messageData.senderId,
             content: content,
+            type: type,
+            fileUrl: fileUrl,
             timestamp: new Date(),
             status: 'sent'
         };
