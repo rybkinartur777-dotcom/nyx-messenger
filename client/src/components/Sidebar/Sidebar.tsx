@@ -7,7 +7,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
-    const { user, chats, activeChat, setActiveChat } = useStore();
+    const { user, chats, activeChat, setActiveChat, sidebarOpen, toggleSidebar } = useStore();
 
     const formatTime = (date: Date) => {
         const now = new Date();
@@ -25,8 +25,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
     };
 
     return (
-        <div className="sidebar">
+        <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
             <div className="sidebar-header">
+                <button className="btn btn-ghost mobile-only" onClick={toggleSidebar}>
+                    ✕
+                </button>
                 <div className="logo">
                     <div className="logo-icon">N</div>
                     <span className="logo-text">Nyx</span>
@@ -57,7 +60,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                         <div
                             key={chat.id}
                             className={`chat-item ${activeChat?.id === chat.id ? 'active' : ''}`}
-                            onClick={() => setActiveChat(chat)}
+                            onClick={() => {
+                                setActiveChat(chat);
+                                if (window.innerWidth <= 768) {
+                                    toggleSidebar();
+                                }
+                            }}
                         >
                             <div className="avatar">
                                 {getAvatarLetter(chat)}

@@ -3,7 +3,7 @@ import { useStore } from '../../store/useStore';
 import { socketService } from '../../socket/socketService';
 
 export const ChatWindow: React.FC = () => {
-    const { user, activeChat, messages } = useStore();
+    const { user, activeChat, messages, toggleSidebar } = useStore();
     const [inputValue, setInputValue] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -39,6 +39,12 @@ export const ChatWindow: React.FC = () => {
     if (!activeChat) {
         return (
             <div className="main-chat">
+                <div className="chat-header mobile-only">
+                    <button className="btn btn-ghost" onClick={toggleSidebar}>
+                        ☰
+                    </button>
+                    <div className="logo-text" style={{ fontSize: '1.2rem' }}>Nyx</div>
+                </div>
                 <div className="empty-state">
                     <div className="empty-state-icon">🔒</div>
                     <div className="empty-state-title">Nyx Messenger</div>
@@ -56,6 +62,9 @@ export const ChatWindow: React.FC = () => {
     return (
         <div className="main-chat">
             <div className="chat-header">
+                <button className="btn btn-ghost mobile-only" onClick={toggleSidebar}>
+                    ☰
+                </button>
                 <div className="avatar" style={{ width: '44px', height: '44px' }}>
                     {activeChat.name?.[0]?.toUpperCase() || '?'}
                 </div>
