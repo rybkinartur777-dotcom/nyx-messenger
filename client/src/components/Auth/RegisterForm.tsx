@@ -71,7 +71,8 @@ export const RegisterForm: React.FC = () => {
             setGeneratedId(userId);
             setUser(user);
         } catch (err: any) {
-            setError(err.message || 'Ошибка при регистрации. Попробуйте снова.');
+            setGeneratedId(null);
+            setError(err.message || 'Ошибка сети. Проверьте соединение.');
             console.error(err);
         } finally {
             setIsLoading(false);

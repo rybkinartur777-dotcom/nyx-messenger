@@ -156,7 +156,7 @@ router.post('/logout', (req: Request, res: Response) => {
         try {
             const decoded = jwt.verify(token, JWT_SECRET) as { sessionId: string };
             const db = getDb();
-            db.prepare('DELETE FROM sessions WHERE id = ?').run(decoded.sessionId);
+            db.run('DELETE FROM sessions WHERE id = ?', [decoded.sessionId]);
         } catch {
             // Token invalid, ignore
         }
