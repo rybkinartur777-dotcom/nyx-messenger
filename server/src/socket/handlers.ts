@@ -20,7 +20,7 @@ export function setupSocketHandlers(io: Server) {
         console.log(`🔌 User connected: ${socket.id}`);
 
         // User authentication
-        socket.on('auth', (userId: string) => {
+        socket.on('auth', async (userId: string) => {
             onlineUsers[socket.id] = { userId: userId, socketId: socket.id };
 
             if (!userSockets[userId]) {
@@ -34,9 +34,9 @@ export function setupSocketHandlers(io: Server) {
             // Join user's chat rooms from DB
             const db = getDb();
             try {
-                const chats = db.prepare(`
+                const chats = await db.all(`
                     SELECT chat_id FROM chat_participants WHERE user_id = ?
-                `).all(userId) as { chat_id: string }[];
+                `, [userId]) as { chat_id: string }[];
 
                 chats.forEach(chat => {
                     socket.join(`chat:${chat.chat_id}`);
@@ -51,7 +51,7 @@ export function setupSocketHandlers(io: Server) {
         });
 
         // New message
-        socket.on('message:send', (data: {
+        socket.on('message:send', async (data: {
             chatId: string;
             senderId: string;
             encryptedContent: string;
@@ -64,22 +64,32 @@ export function setupSocketHandlers(io: Server) {
             // Generate message ID
             const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-            // Save to database
-            db.prepare(`
-        INSERT INTO messages (id, chat_id, sender_id, encrypted_content, nonce, reply_to)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(messageId, chatId, senderId, encryptedContent, nonce, replyTo || null);
+            try {
+                // Save to database
+                await db.run(`
+                    INSERT INTO messages (id, chat_id, sender_id, encrypted_content, nonce, reply_to)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                `, [messageId, chatId, senderId, encryptedContent, nonce, replyTo || null]);
 
-            // Broadcast to chat room
-            io.to(`chat:${chatId}`).emit('message:new', {
-                id: messageId,
-                chatId,
-                senderId,
-                encryptedContent,
-                nonce,
-                replyTo,
-                timestamp: new Date().toISOString()
-            });
+                // Also make sure they are in the participants table (if not already)
+                await db.run('INSERT OR IGNORE INTO chat_participants (chat_id, user_id) VALUES (?, ?)', [chatId, senderId]);
+
+                // Ensure the socket is in the room
+                socket.join(`chat:${chatId}`);
+
+                // Broadcast to chat room
+                io.to(`chat:${chatId}`).emit('message:new', {
+                    id: messageId,
+                    chatId,
+                    senderId,
+                    encryptedContent,
+                    nonce,
+                    replyTo,
+                    timestamp: new Date().toISOString()
+                });
+            } catch (err) {
+                console.error('Error saving message:', err);
+            }
         });
 
         // Typing indicator

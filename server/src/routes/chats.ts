@@ -5,18 +5,18 @@ import { v4 as uuidv4 } from 'uuid';
 const router = Router();
 
 // Create private chat
-router.post('/private', (req: Request, res: Response) => {
+router.post('/private', async (req: Request, res: Response) => {
     try {
         const { userId, contactId } = req.body;
         const db = getDb();
 
         // Check if chat already exists
-        const existingChat = db.prepare(`
+        const existingChat = await db.get(`
       SELECT c.id FROM chats c
       JOIN chat_participants cp1 ON c.id = cp1.chat_id AND cp1.user_id = ?
       JOIN chat_participants cp2 ON c.id = cp2.chat_id AND cp2.user_id = ?
       WHERE c.type = 'private'
-    `).get(userId, contactId) as any;
+    `, [userId, contactId]) as any;
 
         if (existingChat) {
             return res.json({
@@ -28,13 +28,13 @@ router.post('/private', (req: Request, res: Response) => {
         // Create new chat
         const chatId = uuidv4();
 
-        db.prepare(`
+        await db.run(`
       INSERT INTO chats (id, type) VALUES (?, 'private')
-    `).run(chatId);
+    `, [chatId]);
 
-        db.prepare(`
+        await db.run(`
       INSERT INTO chat_participants (chat_id, user_id) VALUES (?, ?), (?, ?)
-    `).run(chatId, userId, chatId, contactId);
+    `, [chatId, userId, chatId, contactId]);
 
         res.json({
             success: true,
@@ -50,25 +50,23 @@ router.post('/private', (req: Request, res: Response) => {
 });
 
 // Create group chat
-router.post('/group', (req: Request, res: Response) => {
+router.post('/group', async (req: Request, res: Response) => {
     try {
         const { name, creatorId, participants } = req.body;
         const db = getDb();
 
         const chatId = uuidv4();
 
-        db.prepare(`
+        await db.run(`
       INSERT INTO chats (id, type, name) VALUES (?, 'group', ?)
-    `).run(chatId, name);
+    `, [chatId, name]);
 
         // Add all participants including creator
         const allParticipants = [creatorId, ...participants];
-        const insertParticipant = db.prepare(`
-      INSERT INTO chat_participants (chat_id, user_id) VALUES (?, ?)
-    `);
-
         for (const participantId of allParticipants) {
-            insertParticipant.run(chatId, participantId);
+            await db.run(`
+                INSERT INTO chat_participants (chat_id, user_id) VALUES (?, ?)
+            `, [chatId, participantId]);
         }
 
         res.json({
@@ -85,12 +83,12 @@ router.post('/group', (req: Request, res: Response) => {
 });
 
 // Get user's chats
-router.get('/user/:userId', (req: Request, res: Response) => {
+router.get('/user/:userId', async (req: Request, res: Response) => {
     try {
         const { userId } = req.params;
         const db = getDb();
 
-        const chats = db.prepare(`
+        const chats = await db.all(`
       SELECT c.*, 
         (SELECT COUNT(*) FROM messages m 
          WHERE m.chat_id = c.id 
@@ -99,24 +97,24 @@ router.get('/user/:userId', (req: Request, res: Response) => {
       JOIN chat_participants cp ON c.id = cp.chat_id
       WHERE cp.user_id = ?
       ORDER BY c.created_at DESC
-    `).all(userId, userId) as any[];
+    `, [userId, userId]) as any[];
 
-        const result = chats.map(chat => {
+        const result = await Promise.all(chats.map(async (chat) => {
             // Get participants
-            const participants = db.prepare(`
+            const participants = await db.all(`
         SELECT u.id, u.nickname, u.avatar
         FROM users u
         JOIN chat_participants cp ON u.id = cp.user_id
         WHERE cp.chat_id = ?
-      `).all(chat.id) as any[];
+      `, [chat.id]) as any[];
 
             // Get last message
-            const lastMessage = db.prepare(`
+            const lastMessage = await db.get(`
         SELECT * FROM messages 
         WHERE chat_id = ? 
         ORDER BY created_at DESC 
         LIMIT 1
-      `).get(chat.id) as any;
+      `, [chat.id]) as any;
 
             return {
                 id: chat.id,
@@ -134,7 +132,7 @@ router.get('/user/:userId', (req: Request, res: Response) => {
                 } : null,
                 createdAt: chat.created_at
             };
-        });
+        }));
 
         res.json({
             success: true,
@@ -150,7 +148,7 @@ router.get('/user/:userId', (req: Request, res: Response) => {
 });
 
 // Get chat messages
-router.get('/:chatId/messages', (req: Request, res: Response) => {
+router.get('/:chatId/messages', async (req: Request, res: Response) => {
     try {
         const { chatId } = req.params;
         const { limit = 50, before } = req.query;
@@ -170,7 +168,7 @@ router.get('/:chatId/messages', (req: Request, res: Response) => {
         query += ` ORDER BY created_at DESC LIMIT ?`;
         params.push(Number(limit));
 
-        const messages = db.prepare(query).all(...params) as any[];
+        const messages = await db.all(query, params) as any[];
 
         res.json({
             success: true,

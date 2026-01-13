@@ -2,9 +2,16 @@ import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import fs from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const dbPath = join(__dirname, '../../data/nyx.db');
+const dataDir = join(__dirname, '../../data');
+const dbPath = join(dataDir, 'nyx.db');
+
+// Ensure directory exists
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
 
 let db: Database;
 

@@ -7,7 +7,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
-    const { user, chats, activeChat, setActiveChat, sidebarOpen, toggleSidebar } = useStore();
+    const { user, chats, activeChat, setActiveChat, sidebarOpen, toggleSidebar, logout } = useStore();
 
     const formatTime = (date: Date) => {
         const now = new Date();
@@ -108,6 +108,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                         title="Скопировать ID"
                     >
                         📋
+                    </button>
+                    <button
+                        className="btn btn-ghost"
+                        onClick={() => {
+                            if (window.confirm('Вы уверены, что хотите выйти?')) {
+                                localStorage.removeItem('nyx-user-keys');
+                                localStorage.removeItem('nyx-user-data');
+                                logout();
+                            }
+                        }}
+                        title="Выход"
+                        style={{ color: 'var(--danger)' }}
+                    >
+                        🚪
                     </button>
                 </div>
             )}

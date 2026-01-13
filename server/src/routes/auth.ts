@@ -7,7 +7,7 @@ const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'nyx-secret-key-change-in-production';
 
 // Register new user
-router.post('/register', (req: Request, res: Response) => {
+router.post('/register', async (req: Request, res: Response) => {
     try {
         const { id, nickname, publicKey } = req.body;
 
@@ -21,9 +21,10 @@ router.post('/register', (req: Request, res: Response) => {
         const db = getDb();
 
         // Check if nickname exists
-        const existingUser = db.prepare(
-            'SELECT id FROM users WHERE nickname = ?'
-        ).get(nickname);
+        const existingUser = await db.get(
+            'SELECT id FROM users WHERE nickname = ?',
+            [nickname]
+        );
 
         if (existingUser) {
             return res.status(409).json({
@@ -33,19 +34,19 @@ router.post('/register', (req: Request, res: Response) => {
         }
 
         // Create user
-        db.prepare(`
+        await db.run(`
       INSERT INTO users (id, nickname, public_key)
       VALUES (?, ?, ?)
-    `).run(id, nickname, publicKey);
+    `, [id, nickname, publicKey]);
 
         // Generate JWT token
         const sessionId = uuidv4();
         const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
-        db.prepare(`
+        await db.run(`
       INSERT INTO sessions (id, user_id, expires_at)
       VALUES (?, ?, ?)
-    `).run(sessionId, id, expiresAt.toISOString());
+    `, [sessionId, id, expiresAt.toISOString()]);
 
         const token = jwt.sign(
             { userId: id, sessionId },
@@ -75,7 +76,7 @@ router.post('/register', (req: Request, res: Response) => {
 });
 
 // Login (reconnect with existing ID)
-router.post('/login', (req: Request, res: Response) => {
+router.post('/login', async (req: Request, res: Response) => {
     try {
         const { id, publicKey } = req.body;
 
@@ -89,9 +90,10 @@ router.post('/login', (req: Request, res: Response) => {
         const db = getDb();
 
         // Find user
-        const user = db.prepare(
-            'SELECT * FROM users WHERE id = ?'
-        ).get(id) as any;
+        const user = await db.get(
+            'SELECT * FROM users WHERE id = ?',
+            [id]
+        ) as any;
 
         if (!user) {
             return res.status(404).json({
@@ -112,10 +114,10 @@ router.post('/login', (req: Request, res: Response) => {
         const sessionId = uuidv4();
         const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-        db.prepare(`
+        await db.run(`
       INSERT INTO sessions (id, user_id, expires_at)
       VALUES (?, ?, ?)
-    `).run(sessionId, id, expiresAt.toISOString());
+    `, [sessionId, id, expiresAt.toISOString()]);
 
         const token = jwt.sign(
             { userId: id, sessionId },
