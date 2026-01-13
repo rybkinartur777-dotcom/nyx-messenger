@@ -107,6 +107,7 @@ export const useStore = create<AppState>()(
                 user: state.user,
                 isAuthenticated: state.isAuthenticated,
                 contacts: state.contacts,
+                chats: state.chats,
             }),
         }
     )

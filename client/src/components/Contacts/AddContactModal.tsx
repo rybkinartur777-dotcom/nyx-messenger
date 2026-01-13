@@ -49,8 +49,26 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
         setIsLoading(true);
 
         try {
-            const serverUrl = (import.meta as any).env.VITE_SERVER_URL || 'http://localhost:4000';
-            const response = await fetch(`${serverUrl}/api/users/${contactId}`);
+            const baseUrl = (import.meta as any).env.VITE_SERVER_URL || 'http://localhost:4000';
+            const serverUrl = baseUrl.replace(/\/$/, '');
+            const targetUrl = `${serverUrl}/api/users/${contactId}`;
+
+            console.log('🔍 Searching for user:', targetUrl);
+
+            const response = await fetch(targetUrl);
+
+            if (!response.ok) {
+                const text = await response.text();
+                console.error('❌ Server error response:', text);
+                try {
+                    const errorJson = JSON.parse(text);
+                    setError(errorJson.error || 'Пользователь не найден');
+                } catch (e) {
+                    setError('Ошибка сервера при поиске');
+                }
+                return;
+            }
+
             const result = await response.json();
 
             if (!result.success) {
@@ -87,8 +105,9 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
             onClose();
             setContactId('');
             setContactName('');
-        } catch (err) {
-            setError('Ошибка при поиске пользователя');
+        } catch (err: any) {
+            console.error('🔍 Search error details:', err);
+            setError('Ошибка сети или сервера');
         } finally {
             setIsLoading(false);
         }
