@@ -49,7 +49,7 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
 
         try {
             const serverUrl = API_BASE_URL.replace(/\/$/, '');
-            const targetUrl = `${serverUrl} /api/users / ${contactId} `;
+            const targetUrl = `${serverUrl}/api/users/${contactId}`;
 
             console.log('🔍 Searching for user:', targetUrl);
 
@@ -86,7 +86,7 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
             });
 
             // Create chat on server
-            const chatRes = await fetch(`${serverUrl} /api/chats / private`, {
+            const chatRes = await fetch(`${serverUrl}/api/chats/private`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userId: user!.id, contactId })
