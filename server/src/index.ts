@@ -39,10 +39,6 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', service: 'nyx-server' });
 });
 
-// Basic route to confirm server is alive
-app.get('/', (req, res) => {
-    res.send('🌙 NYX Secure Messenger Server is running');
-});
 
 // API Routes
 app.use('/api/auth', authRoutes);
