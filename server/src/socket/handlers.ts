@@ -32,7 +32,7 @@ export function setupSocketHandlers(io: Server) {
             socket.join(`user:${userId}`);
 
             // Join user's chat rooms from DB
-            const db = getDb();
+            const db = getDb() as any;
             try {
                 const chats = await db.all(`
                     SELECT chat_id FROM chat_participants WHERE user_id = ?
@@ -52,6 +52,7 @@ export function setupSocketHandlers(io: Server) {
 
         // New message
         socket.on('message:send', async (data: {
+            id?: string;
             chatId: string;
             senderId: string;
             message_type?: string;
@@ -61,10 +62,10 @@ export function setupSocketHandlers(io: Server) {
             replyTo?: string;
         }) => {
             const { chatId, senderId, message_type, encryptedContent, file_url, nonce, replyTo } = data;
-            const db = getDb();
+            const db = getDb() as any;
 
-            // Generate message ID
-            const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            // Use provided ID or generate one
+            const messageId = data.id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
             try {
                 // Save to database
@@ -79,8 +80,7 @@ export function setupSocketHandlers(io: Server) {
                 // Ensure the socket is in the room
                 socket.join(`chat:${chatId}`);
 
-                // Broadcast to chat room
-                io.to(`chat:${chatId}`).emit('message:new', {
+                const messageData = {
                     id: messageId,
                     chatId,
                     senderId,
@@ -90,7 +90,19 @@ export function setupSocketHandlers(io: Server) {
                     nonce,
                     replyTo,
                     timestamp: new Date().toISOString()
-                });
+                };
+
+                // Fetch all participants of this chat to guarantee delivery even if they haven't joined the chat room yet
+                const participants = await db.all('SELECT user_id FROM chat_participants WHERE chat_id = ?', [chatId]) as { user_id: string }[];
+
+                if (participants && participants.length > 0) {
+                    participants.forEach(p => {
+                        io.to(`user:${p.user_id}`).emit('message:new', messageData);
+                    });
+                } else {
+                    // Fallback to chat room if participants query fails
+                    io.to(`chat:${chatId}`).emit('message:new', messageData);
+                }
             } catch (err) {
                 console.error('Error saving message:', err);
             }
@@ -99,6 +111,42 @@ export function setupSocketHandlers(io: Server) {
         // Typing indicator
         socket.on('message:typing', (data: { chatId: string; userId: string }) => {
             socket.to(`chat:${data.chatId}`).emit('message:typing', data);
+        });
+
+        // Delete message
+        socket.on('message:delete', async (data: { chatId: string, messageId: string, userId: string }) => {
+            const { chatId, messageId, userId } = data;
+            const db = getDb() as any;
+
+            try {
+                // Delete message where id matches and sender is the current user
+                await db.run('DELETE FROM messages WHERE id = ? AND chat_id = ? AND sender_id = ?', [messageId, chatId, userId]);
+
+                // Broadcast deletion to chat room
+                io.to(`chat:${chatId}`).emit('message:deleted', {
+                    chatId,
+                    messageId
+                });
+            } catch (err) {
+                console.error('Error deleting message:', err);
+            }
+        });
+
+        // Mark messages as read
+        socket.on('message:read', async (data: { chatId: string, userId: string }) => {
+            const db = getDb() as any;
+            try {
+                // Update messages in database
+                await db.run('UPDATE messages SET status = ? WHERE chat_id = ? AND sender_id != ? AND status != ?', ['read', data.chatId, data.userId, 'read']);
+
+                // Broadcast to the chat room that messages were read by this user
+                socket.to(`chat:${data.chatId}`).emit('message:read', {
+                    chatId: data.chatId,
+                    userId: data.userId
+                });
+            } catch (err) {
+                console.error('Error marking messages read:', err);
+            }
         });
 
         // Join chat room

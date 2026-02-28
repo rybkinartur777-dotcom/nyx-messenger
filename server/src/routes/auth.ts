@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getDb } from '../models/database.js';
+import { get, run } from '../models/database.js';
 import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
 
@@ -9,7 +9,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'nyx-secret-key-change-in-productio
 // Register new user
 router.post('/register', async (req: Request, res: Response) => {
     try {
-        const { id, nickname, publicKey } = req.body;
+        const { id, nickname, publicKey, avatar } = req.body;
 
         if (!id || !nickname || !publicKey) {
             return res.status(400).json({
@@ -18,32 +18,17 @@ router.post('/register', async (req: Request, res: Response) => {
             });
         }
 
-        const db = getDb();
-
-        // Check if nickname exists
-        const existingUser = await db.get(
-            'SELECT id FROM users WHERE nickname = ?',
-            [nickname]
-        );
-
-        if (existingUser) {
-            return res.status(409).json({
-                success: false,
-                error: 'Nickname already taken'
-            });
-        }
-
         // Create user
-        await db.run(`
-      INSERT INTO users (id, nickname, public_key)
-      VALUES (?, ?, ?)
-    `, [id, nickname, publicKey]);
+        await run(`
+      INSERT INTO users (id, nickname, public_key, avatar)
+      VALUES (?, ?, ?, ?)
+    `, [id, nickname, publicKey, avatar || null]);
 
         // Generate JWT token
         const sessionId = uuidv4();
         const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
-        await db.run(`
+        await run(`
       INSERT INTO sessions (id, user_id, expires_at)
       VALUES (?, ?, ?)
     `, [sessionId, id, expiresAt.toISOString()]);
@@ -61,6 +46,7 @@ router.post('/register', async (req: Request, res: Response) => {
                     id,
                     nickname,
                     publicKey,
+                    avatar,
                     createdAt: new Date().toISOString()
                 },
                 token
@@ -87,10 +73,8 @@ router.post('/login', async (req: Request, res: Response) => {
             });
         }
 
-        const db = getDb();
-
         // Find user
-        const user = await db.get(
+        const user = await get(
             'SELECT * FROM users WHERE id = ?',
             [id]
         ) as any;
@@ -114,7 +98,7 @@ router.post('/login', async (req: Request, res: Response) => {
         const sessionId = uuidv4();
         const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-        await db.run(`
+        await run(`
       INSERT INTO sessions (id, user_id, expires_at)
       VALUES (?, ?, ?)
     `, [sessionId, id, expiresAt.toISOString()]);
@@ -155,8 +139,7 @@ router.post('/logout', (req: Request, res: Response) => {
         const token = authHeader.substring(7);
         try {
             const decoded = jwt.verify(token, JWT_SECRET) as { sessionId: string };
-            const db = getDb();
-            db.run('DELETE FROM sessions WHERE id = ?', [decoded.sessionId]);
+            run('DELETE FROM sessions WHERE id = ?', [decoded.sessionId]);
         } catch {
             // Token invalid, ignore
         }

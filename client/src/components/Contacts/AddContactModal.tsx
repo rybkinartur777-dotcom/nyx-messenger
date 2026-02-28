@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { Chat } from '../../types';
-import { v4 as uuidv4 } from 'uuid';
+import { API_BASE_URL } from '../../config';
 import { socketService } from '../../socket/socketService';
 
 interface AddContactModalProps {
@@ -11,7 +11,6 @@ interface AddContactModalProps {
 
 export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClose }) => {
     const [contactId, setContactId] = useState('');
-    const [contactName, setContactName] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -30,8 +29,8 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
             return;
         }
 
-        if (contactId === user?.id) {
-            setError('Нельзя добавить себя');
+        if (contactId.trim().toLowerCase() === user?.id?.toLowerCase()) {
+            setError('Нельзя добавить себя (сообщения самому себе будут отображаться только справа)');
             return;
         }
 
@@ -49,9 +48,8 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
         setIsLoading(true);
 
         try {
-            const baseUrl = (import.meta as any).env.VITE_SERVER_URL || 'https://nyx-messenger-e77j.onrender.com';
-            const serverUrl = baseUrl.replace(/\/$/, '');
-            const targetUrl = `${serverUrl}/api/users/${contactId}`;
+            const serverUrl = API_BASE_URL.replace(/\/$/, '');
+            const targetUrl = `${serverUrl} /api/users / ${contactId} `;
 
             console.log('🔍 Searching for user:', targetUrl);
 
@@ -81,30 +79,51 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
             // Add contact
             addContact({
                 userId: foundUser.id,
-                nickname: contactName || foundUser.nickname,
+                nickname: foundUser.nickname,
                 publicKey: foundUser.publicKey,
+                avatar: foundUser.avatar,
                 addedAt: new Date()
             });
 
-            // Create chat
+            // Create chat on server
+            const chatRes = await fetch(`${serverUrl} /api/chats / private`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user!.id, contactId })
+            });
+
+            const chatResult = await chatRes.json();
+
+            if (!chatResult.success) {
+                throw new Error('Не удалось создать чат на сервере');
+            }
+
+            const serverChatId = chatResult.data.chatId;
+
+            // Create chat locally or use existing
             const newChat: Chat = {
-                id: uuidv4(),
+                id: serverChatId,
                 type: 'private',
                 participants: [user!.id, contactId],
-                name: contactName || foundUser.nickname,
+                name: foundUser.nickname,
+                avatar: foundUser.avatar,
                 unreadCount: 0,
                 createdAt: new Date()
             };
 
-            setChats([...chats, newChat]);
-            setActiveChat(newChat);
+            const existingInStore = chats.find(c => c.id === serverChatId);
+            if (existingInStore) {
+                setActiveChat(existingInStore);
+            } else {
+                setChats([...chats, newChat]);
+                setActiveChat(newChat);
+            }
 
             // Tell server to join this chat room
-            socketService.joinChat(newChat.id);
+            socketService.joinChat(serverChatId);
 
             onClose();
             setContactId('');
-            setContactName('');
         } catch (err: any) {
             console.error('🔍 Search error details:', err);
             setError('Ошибка сети или сервера');
@@ -127,23 +146,12 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
                     <label className="form-label">ID контакта *</label>
                     <input
                         type="text"
-                        className={`form-input ${error ? 'error' : ''}`}
+                        className={`form - input ${error ? 'error' : ''} `}
                         placeholder="NYX-XXXXXXXX"
                         value={contactId}
-                        onChange={(e) => setContactId(e.target.value.toUpperCase())}
+                        onChange={(e) => setContactId(e.target.value.trim())}
                     />
                     {error && <div className="form-error">{error}</div>}
-                </div>
-
-                <div className="form-group">
-                    <label className="form-label">Имя контакта (необязательно)</label>
-                    <input
-                        type="text"
-                        className="form-input"
-                        placeholder="Как назвать контакт?"
-                        value={contactName}
-                        onChange={(e) => setContactName(e.target.value)}
-                    />
                 </div>
 
                 <div style={{

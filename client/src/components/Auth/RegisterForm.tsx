@@ -1,13 +1,24 @@
 import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { cryptoService } from '../../crypto/cryptoService';
+import { API_BASE_URL } from '../../config';
 
 export const RegisterForm: React.FC = () => {
     const [nickname, setNickname] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [generatedId, setGeneratedId] = useState<string | null>(null);
+    const [selectedAvatar, setSelectedAvatar] = useState('/avatars/avatar1.png');
     const setUser = useStore((state) => state.setUser);
+
+    const AVATARS = [
+        '/avatars/avatar1.png',
+        '/avatars/avatar2.png',
+        '/avatars/avatar3.png',
+        '/avatars/avatar4.png',
+        '/avatars/avatar5.png',
+        '/avatars/avatar6.png',
+    ];
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -42,12 +53,11 @@ export const RegisterForm: React.FC = () => {
             localStorage.setItem('nyx_private_key', privateKey);
 
             // Register on server
-            const baseUrl = (import.meta as any).env.VITE_SERVER_URL || 'https://nyx-messenger-e77j.onrender.com';
-            const serverUrl = baseUrl.replace(/\/$/, '');
+            const serverUrl = API_BASE_URL.replace(/\/$/, '');
             const response = await fetch(`${serverUrl}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: userId, nickname: nickname.trim(), publicKey })
+                body: JSON.stringify({ id: userId, nickname: nickname.trim(), publicKey, avatar: selectedAvatar })
             });
 
             const result = await response.json();
@@ -61,6 +71,7 @@ export const RegisterForm: React.FC = () => {
                 id: userId,
                 nickname: nickname.trim(),
                 publicKey,
+                avatar: selectedAvatar,
                 createdAt: new Date(),
                 settings: {
                     allowSearchByNickname: false,
@@ -90,7 +101,7 @@ export const RegisterForm: React.FC = () => {
             <div className="auth-container">
                 <div className="auth-card">
                     <div className="auth-logo">
-                        <div className="logo-icon">N</div>
+                        <img src="/logo.png" className="logo-icon" alt="Nyx Logo" style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />
                         <div className="logo-text">Nyx</div>
                     </div>
 
@@ -125,7 +136,7 @@ export const RegisterForm: React.FC = () => {
         <div className="auth-container">
             <div className="auth-card">
                 <div className="auth-logo">
-                    <img src="/logo.png" alt="Nyx Logo" style={{ width: '80px', height: '80px', borderRadius: '16px', marginBottom: '16px', boxShadow: '0 0 20px rgba(0, 243, 255, 0.2)' }} />
+                    <img src="/logo.png" className="logo-icon" alt="Nyx Logo" style={{ width: '80px', height: '80px', borderRadius: '16px', marginBottom: '16px', boxShadow: '0 0 20px rgba(0, 243, 255, 0.2)', objectFit: 'cover' }} />
                     <div className="logo-text" style={{ fontSize: '2rem' }}>Nyx</div>
                 </div>
 
@@ -146,6 +157,30 @@ export const RegisterForm: React.FC = () => {
                             autoFocus
                         />
                         {error && <div className="form-error">{error}</div>}
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Выберите аватар</label>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', justifyContent: 'center' }}>
+                            {AVATARS.map((avatar, index) => (
+                                <img
+                                    key={index}
+                                    src={avatar}
+                                    alt={`Avatar ${index + 1}`}
+                                    onClick={() => setSelectedAvatar(avatar)}
+                                    style={{
+                                        width: '48px',
+                                        height: '48px',
+                                        borderRadius: '50%',
+                                        cursor: 'pointer',
+                                        border: selectedAvatar === avatar ? '2px solid var(--primary)' : '2px solid transparent',
+                                        opacity: selectedAvatar === avatar ? 1 : 0.6,
+                                        transition: 'all 0.2s',
+                                        objectFit: 'cover'
+                                    }}
+                                />
+                            ))}
+                        </div>
                     </div>
 
                     <div style={{

@@ -7,7 +7,19 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
-    const { user, chats, activeChat, setActiveChat, sidebarOpen, toggleSidebar, logout } = useStore();
+    const { user, chats, activeChat, setActiveChat, sidebarOpen, toggleSidebar, logout, theme, setTheme } = useStore();
+
+    const handleThemeToggle = () => {
+        if (theme === 'dark') setTheme('light');
+        else if (theme === 'light') setTheme('cyberpunk');
+        else setTheme('dark');
+    };
+
+    const getThemeIcon = () => {
+        if (theme === 'dark') return '🌙';
+        if (theme === 'light') return '☀️';
+        return '🌃';
+    };
 
     const formatTime = (date: Date) => {
         const now = new Date();
@@ -31,7 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                     ✕
                 </button>
                 <div className="logo">
-                    <img src="/logo.png" alt="Nyx Logo" style={{ width: '32px', height: '32px', borderRadius: '8px', marginRight: '8px' }} />
+                    <img src="/logo.png" className="logo-icon" alt="Nyx Logo" style={{ width: '32px', height: '32px', borderRadius: '8px', marginRight: '8px', objectFit: 'cover' }} />
                     <span className="logo-text">Nyx</span>
                 </div>
                 <button className="btn btn-ghost" onClick={onAddContact} title="Добавить контакт">
@@ -67,8 +79,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                 }
                             }}
                         >
-                            <div className="avatar">
-                                {getAvatarLetter(chat)}
+                            <div className="avatar" style={chat.avatar ? { padding: 0, overflow: 'hidden' } : {}}>
+                                {chat.avatar ? (
+                                    <img src={chat.avatar} alt={chat.name || 'Chat'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    getAvatarLetter(chat)
+                                )}
                             </div>
                             <div className="chat-info">
                                 <div className="chat-name">{chat.name || 'Неизвестный'}</div>
@@ -93,8 +109,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
 
             {user && (
                 <div className="profile-section">
-                    <div className="avatar" style={{ width: '40px', height: '40px', fontSize: '16px' }}>
-                        {user.nickname[0].toUpperCase()}
+                    <div className="avatar" style={{ width: '40px', height: '40px', fontSize: '16px', overflow: 'hidden', padding: user.avatar ? 0 : undefined }}>
+                        {user.avatar ? (
+                            <img src={user.avatar} alt={user.nickname} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                            user.nickname[0].toUpperCase()
+                        )}
                     </div>
                     <div className="profile-info">
                         <div className="profile-name">{user.nickname}</div>
@@ -106,20 +126,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                             navigator.clipboard.writeText(user.id);
                         }}
                         title="Скопировать ID"
+                        style={{ padding: '8px 4px' }}
                     >
                         📋
                     </button>
                     <button
                         className="btn btn-ghost"
+                        onClick={handleThemeToggle}
+                        title="Сменить тему"
+                        style={{ padding: '8px 4px' }}
+                    >
+                        {getThemeIcon()}
+                    </button>
+                    <button
+                        className="btn btn-ghost"
                         onClick={() => {
                             if (window.confirm('Вы уверены, что хотите выйти?')) {
-                                localStorage.removeItem('nyx-user-keys');
-                                localStorage.removeItem('nyx-user-data');
+                                localStorage.removeItem('nyx_private_key');
+                                localStorage.removeItem('nyx-storage');
                                 logout();
+                                window.location.reload();
                             }
                         }}
                         title="Выход"
-                        style={{ color: 'var(--danger)' }}
+                        style={{ color: 'var(--danger)', padding: '8px 4px' }}
                     >
                         🚪
                     </button>
