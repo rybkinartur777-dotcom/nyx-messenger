@@ -11,8 +11,10 @@ class SocketService {
         if (this.socket) return;
 
         this.socket = io(this.serverUrl, {
-            transports: ['websocket'],
-            reconnection: true
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            reconnectionAttempts: Infinity
         });
 
         this.socket.on('connect', () => {
