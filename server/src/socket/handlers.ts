@@ -78,7 +78,11 @@ export function setupSocketHandlers(io: Server) {
                 `, [messageId, chatId, senderId, message_type || 'text', encryptedContent, file_url || null, nonce, replyTo || null]);
 
                 // Ensure sender is in participants
-                await run('INSERT OR IGNORE INTO chat_participants (chat_id, user_id) VALUES (?, ?)', [chatId, senderId]);
+                try {
+                    await run('INSERT INTO chat_participants (chat_id, user_id) VALUES (?, ?)', [chatId, senderId]);
+                } catch (e) {
+                    // Ignore duplicate participant error
+                }
 
                 // Ensure socket is in the room
                 socket.join(`chat:${chatId}`);
@@ -184,10 +188,14 @@ export function setupSocketHandlers(io: Server) {
 
             try {
                 if (action === 'add') {
-                    await run(
-                        'INSERT OR IGNORE INTO message_reactions (message_id, user_id, emoji) VALUES (?, ?, ?)',
-                        [messageId, userId, emoji]
-                    );
+                    try {
+                        await run(
+                            'INSERT INTO message_reactions (message_id, user_id, emoji) VALUES (?, ?, ?)',
+                            [messageId, userId, emoji]
+                        );
+                    } catch (e) {
+                        // Ignore duplicate reaction error
+                    }
                 } else {
                     await run(
                         'DELETE FROM message_reactions WHERE message_id = ? AND user_id = ? AND emoji = ?',
