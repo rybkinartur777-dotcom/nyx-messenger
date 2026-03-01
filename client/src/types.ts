@@ -10,7 +10,13 @@ export interface User {
 
 export interface UserSettings {
     allowSearchByNickname: boolean;
-    autoDeleteMessages: number | null; // seconds or null
+    autoDeleteMessages: number | null;
+}
+
+// Reaction types
+export interface Reaction {
+    emoji: string;
+    userId: string;
 }
 
 // Message types
@@ -19,12 +25,15 @@ export interface Message {
     chatId: string;
     senderId: string;
     content: string;
-    type: 'text' | 'image' | 'audio' | 'file';
+    type: 'text' | 'image' | 'audio' | 'file' | 'sticker' | 'video';
     fileUrl?: string;
     timestamp: Date;
     status: 'sending' | 'sent' | 'delivered' | 'read';
-    replyTo?: string;
+    replyTo?: string;       // ID of message being replied to
+    replyContent?: string;  // Cached content of replied message
+    replySender?: string;   // Nickname of sender being replied to
     expiresAt?: Date;
+    reactions?: Reaction[];
 }
 
 export interface EncryptedMessage {
@@ -32,11 +41,12 @@ export interface EncryptedMessage {
     chatId: string;
     senderId: string;
     encryptedContent: string;
-    type: 'text' | 'image' | 'audio' | 'file';
+    type: 'text' | 'image' | 'audio' | 'file' | 'sticker' | 'video';
     fileUrl?: string;
     nonce: string;
     timestamp: Date;
     expiresAt?: Date;
+    replyTo?: string;
 }
 
 // Chat types
@@ -80,4 +90,8 @@ export interface SocketEvents {
     'message:typing': (data: { chatId: string; userId: string }) => void;
     'user:online': (userId: string) => void;
     'user:offline': (userId: string) => void;
+    'message:reaction': (data: { chatId: string; messageId: string; emoji: string; userId: string }) => void;
 }
+
+// Online status
+export type OnlineStatus = 'online' | 'offline';

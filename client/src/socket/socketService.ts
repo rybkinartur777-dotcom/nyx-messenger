@@ -21,10 +21,23 @@ class SocketService {
         });
 
         this.socket.on('message:new', async (data: any) => {
-            const { addMessage, updateChatLastMessage, chats, setChats, user } = useStore.getState();
+            const { addMessage, updateChatLastMessage, chats, setChats, user, messages } = useStore.getState();
 
-            // Handle incoming message
-            // In a real app, we would decrypt it here using the private key
+            // Find reply info if message is a reply
+            let replyContent: string | undefined;
+            let replySender: string | undefined;
+            if (data.replyTo) {
+                // Look up message in current state
+                for (const chatMsgs of Object.values(messages)) {
+                    const repliedMsg = (chatMsgs as Message[]).find(m => m.id === data.replyTo);
+                    if (repliedMsg) {
+                        replyContent = repliedMsg.content;
+                        replySender = repliedMsg.senderId === user?.id ? 'Вы' : undefined;
+                        break;
+                    }
+                }
+            }
+
             const message: Message = {
                 id: data.id,
                 chatId: data.chatId,
@@ -33,31 +46,37 @@ class SocketService {
                 type: data.message_type || 'text',
                 fileUrl: data.file_url,
                 timestamp: new Date(data.timestamp),
-                status: 'delivered'
+                status: 'delivered',
+                replyTo: data.replyTo,
+                replyContent,
+                replySender,
+                reactions: []
             };
 
             addMessage(data.chatId, message);
             updateChatLastMessage(data.chatId, message);
 
-            // If the chat doesn't exist locally (e.g., newly created by someone else), fetch all chats
+            // If the chat doesn't exist locally, fetch all chats
             const chatExists = chats.find(c => c.id === data.chatId);
             if (!chatExists && user?.id) {
                 try {
                     const serverUrl = API_BASE_URL.replace(/\/$/, '');
                     const response = await fetch(`${serverUrl}/api/chats/user/${user.id}`);
                     const result = await response.json();
-
-                    if (result.success) {
-                        setChats(result.data);
-                    }
+                    if (result.success) setChats(result.data);
                 } catch (err) {
                     console.error('Failed to fetch chats after new message:', err);
                 }
             }
+
+            // Show browser push notification if tab not focused
+            if (document.hidden && data.senderId !== user?.id) {
+                this.showNotification(data.senderName || 'Nyx', data.encryptedContent);
+            }
         });
 
         this.socket.on('message:typing', () => {
-            // Can be used to show typing indicator
+            // Handled in ChatWindow
         });
 
         this.socket.on('message:deleted', (data: { chatId: string, messageId: string }) => {
@@ -66,9 +85,69 @@ class SocketService {
                 removeMessage(data.chatId, data.messageId);
             }
         });
+
+        this.socket.on('user:online', (userId: string) => {
+            useStore.getState().setUserOnline(userId);
+        });
+
+        // Receive full list of online users on first connect
+        this.socket.on('user:online:list', (userIds: string[]) => {
+            const { setUserOnline } = useStore.getState();
+            userIds.forEach(id => setUserOnline(id));
+        });
+
+        this.socket.on('user:offline', (userId: string) => {
+            useStore.getState().setUserOffline(userId);
+        });
+
+        // Emoji reactions
+        this.socket.on('message:reaction', (data: { chatId: string; messageId: string; emoji: string; userId: string; action: 'add' | 'remove' }) => {
+            const { addReaction, removeReaction } = useStore.getState();
+            if (data.action === 'add') {
+                addReaction(data.chatId, data.messageId, data.emoji, data.userId);
+            } else {
+                removeReaction(data.chatId, data.messageId, data.emoji, data.userId);
+            }
+        });
+
+        // Chat deleted
+        this.socket.on('chat:deleted', (data: { chatId: string }) => {
+            const { removeChat } = useStore.getState();
+            if (data.chatId) {
+                removeChat(data.chatId);
+            }
+        });
     }
 
-    sendMessage(chatId: string, senderId: string, content: string, type: 'text' | 'image' | 'audio' | 'file' = 'text', fileUrl?: string) {
+    private async showNotification(title: string, body: string) {
+        if (!('Notification' in window)) return;
+
+        if (Notification.permission === 'granted') {
+            new Notification(`Nyx — ${title}`, {
+                body: body.length > 60 ? body.slice(0, 60) + '...' : body,
+                icon: '/logo.png',
+                badge: '/logo.png',
+                tag: 'nyx-message'
+            });
+        }
+    }
+
+    requestNotificationPermission() {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }
+
+    sendMessage(
+        chatId: string,
+        senderId: string,
+        content: string,
+        type: 'text' | 'image' | 'audio' | 'file' | 'sticker' | 'video' = 'text',
+        fileUrl?: string,
+        replyTo?: string,
+        replyContent?: string,
+        replySender?: string
+    ) {
         if (!this.socket?.connected) return;
 
         const { addMessage, updateChatLastMessage } = useStore.getState();
@@ -81,13 +160,13 @@ class SocketService {
             encryptedContent: content,
             file_url: fileUrl,
             nonce: 'dummy_nonce',
+            replyTo,
             timestamp: new Date().toISOString()
         };
 
-        // Emit to server
         this.socket.emit('message:send', messageData);
 
-        // Add to local state immediately for responsiveness
+        // Optimistic update
         const localMessage: Message = {
             id: messageData.id,
             chatId: messageData.chatId,
@@ -96,11 +175,30 @@ class SocketService {
             type: type,
             fileUrl: fileUrl,
             timestamp: new Date(),
-            status: 'sent'
+            status: 'sent',
+            replyTo,
+            replyContent,
+            replySender,
+            reactions: []
         };
 
         addMessage(chatId, localMessage);
         updateChatLastMessage(chatId, localMessage);
+    }
+
+    sendReaction(chatId: string, messageId: string, emoji: string, action: 'add' | 'remove') {
+        if (!this.socket?.connected) return;
+        const { user, addReaction, removeReaction } = useStore.getState();
+        if (!user) return;
+
+        this.socket.emit('message:reaction', { chatId, messageId, emoji, userId: user.id, action });
+
+        // Optimistic update
+        if (action === 'add') {
+            addReaction(chatId, messageId, emoji, user.id);
+        } else {
+            removeReaction(chatId, messageId, emoji, user.id);
+        }
     }
 
     joinChat(chatId: string) {
@@ -113,9 +211,17 @@ class SocketService {
 
         this.socket.emit('message:delete', { chatId, messageId, userId });
 
-        // Optimistic UI update
         const { removeMessage } = useStore.getState();
         removeMessage(chatId, messageId);
+    }
+
+    deleteChat(chatId: string) {
+        if (!this.socket?.connected) return;
+        this.socket.emit('chat:delete', { chatId });
+
+        // Optimistically remove on client side
+        const { removeChat } = useStore.getState();
+        removeChat(chatId);
     }
 
     disconnect() {

@@ -15,6 +15,9 @@ interface AppState {
     // Contacts
     contacts: Contact[];
 
+    // Online users
+    onlineUsers: Set<string>;
+
     // UI
     isLoading: boolean;
     sidebarOpen: boolean;
@@ -25,6 +28,7 @@ interface AppState {
     logout: () => void;
     setChats: (chats: Chat[]) => void;
     setActiveChat: (chat: Chat | null) => void;
+    removeChat: (chatId: string) => void;
     addMessage: (chatId: string, message: Message) => void;
     removeMessage: (chatId: string, messageId: string) => void;
     markMessagesAsRead: (chatId: string, userId: string) => void;
@@ -35,11 +39,16 @@ interface AppState {
     toggleSidebar: () => void;
     setTheme: (theme: 'dark' | 'light' | 'cyberpunk') => void;
     updateChatLastMessage: (chatId: string, message: Message) => void;
+    setUserOnline: (userId: string) => void;
+    setUserOffline: (userId: string) => void;
+    isUserOnline: (userId: string) => boolean;
+    addReaction: (chatId: string, messageId: string, emoji: string, userId: string) => void;
+    removeReaction: (chatId: string, messageId: string, emoji: string, userId: string) => void;
 }
 
 export const useStore = create<AppState>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             // Initial state
             user: null,
             isAuthenticated: false,
@@ -47,6 +56,7 @@ export const useStore = create<AppState>()(
             activeChat: null,
             messages: {},
             contacts: [],
+            onlineUsers: new Set<string>(),
             isLoading: false,
             sidebarOpen: true,
             theme: 'dark',
@@ -63,7 +73,8 @@ export const useStore = create<AppState>()(
                 chats: [],
                 activeChat: null,
                 messages: {},
-                contacts: []
+                contacts: [],
+                onlineUsers: new Set<string>()
             }),
 
             setChats: (chats) => set({ chats }),
@@ -74,6 +85,16 @@ export const useStore = create<AppState>()(
                     c.id === chat?.id ? { ...c, unreadCount: 0 } : c
                 )
             })),
+
+            removeChat: (chatId) => set((state) => {
+                const newMessages = { ...state.messages };
+                delete newMessages[chatId];
+                return {
+                    chats: state.chats.filter(c => c.id !== chatId),
+                    activeChat: state.activeChat?.id === chatId ? null : state.activeChat,
+                    messages: newMessages
+                };
+            }),
 
             addMessage: (chatId, message) => set((state) => {
                 const existingMessages = state.messages[chatId] || [];
@@ -116,8 +137,6 @@ export const useStore = create<AppState>()(
                 messages: {
                     ...state.messages,
                     [chatId]: (state.messages[chatId] || []).map(m => {
-                        // If the message was sent to this user (we are the sender), 
-                        // and they read it, mark as read
                         if (m.senderId !== userId) {
                             return { ...m, status: 'read' as const };
                         }
@@ -155,6 +174,54 @@ export const useStore = create<AppState>()(
                     }
                     return chat;
                 })
+            })),
+
+            setUserOnline: (userId) => set((state) => {
+                const newOnline = new Set(state.onlineUsers);
+                newOnline.add(userId);
+                return { onlineUsers: newOnline };
+            }),
+
+            setUserOffline: (userId) => set((state) => {
+                const newOnline = new Set(state.onlineUsers);
+                newOnline.delete(userId);
+                return { onlineUsers: newOnline };
+            }),
+
+            isUserOnline: (userId) => {
+                return get().onlineUsers.has(userId);
+            },
+
+            addReaction: (chatId, messageId, emoji, userId) => set((state) => ({
+                messages: {
+                    ...state.messages,
+                    [chatId]: (state.messages[chatId] || []).map(m => {
+                        if (m.id === messageId) {
+                            const reactions = m.reactions || [];
+                            const exists = reactions.some(r => r.emoji === emoji && r.userId === userId);
+                            if (exists) return m;
+                            return { ...m, reactions: [...reactions, { emoji, userId }] };
+                        }
+                        return m;
+                    })
+                }
+            })),
+
+            removeReaction: (chatId, messageId, emoji, userId) => set((state) => ({
+                messages: {
+                    ...state.messages,
+                    [chatId]: (state.messages[chatId] || []).map(m => {
+                        if (m.id === messageId) {
+                            return {
+                                ...m,
+                                reactions: (m.reactions || []).filter(
+                                    r => !(r.emoji === emoji && r.userId === userId)
+                                )
+                            };
+                        }
+                        return m;
+                    })
+                }
             })),
         }),
         {

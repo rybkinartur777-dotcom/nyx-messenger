@@ -22,6 +22,9 @@ const App: React.FC = () => {
             try {
                 await cryptoService.init();
 
+                // Request push notification permission
+                socketService.requestNotificationPermission();
+
                 // Check for stored keys
                 const privateKey = localStorage.getItem('nyx_private_key');
                 const publicKey = localStorage.getItem('nyx_public_key');

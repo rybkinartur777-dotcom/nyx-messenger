@@ -1,5 +1,6 @@
 import { Server, Socket } from 'socket.io';
 import { getDb } from '../models/database.js';
+import { query, run, get } from '../models/database.js';
 
 interface OnlineUsers {
     [socketId: string]: {
@@ -32,9 +33,8 @@ export function setupSocketHandlers(io: Server) {
             socket.join(`user:${userId}`);
 
             // Join user's chat rooms from DB
-            const db = getDb() as any;
             try {
-                const chats = await db.all(`
+                const chats = await query(`
                     SELECT chat_id FROM chat_participants WHERE user_id = ?
                 `, [userId]) as { chat_id: string }[];
 
@@ -45,9 +45,14 @@ export function setupSocketHandlers(io: Server) {
                 console.log('No chats found for user or table missing');
             }
 
-            // Broadcast online status
+            // Broadcast online status to everyone else
             socket.broadcast.emit('user:online', userId);
-            console.log(`✓ User ${userId} authenticated`);
+
+            // Send list of ALL currently online users to the newly connected user
+            const onlineUserIds = [...new Set(Object.values(onlineUsers).map(u => u.userId))];
+            socket.emit('user:online:list', onlineUserIds);
+
+            console.log(`✓ User ${userId} authenticated, online: ${onlineUserIds.length} users`);
         });
 
         // New message
@@ -62,28 +67,30 @@ export function setupSocketHandlers(io: Server) {
             replyTo?: string;
         }) => {
             const { chatId, senderId, message_type, encryptedContent, file_url, nonce, replyTo } = data;
-            const db = getDb() as any;
 
-            // Use provided ID or generate one
             const messageId = data.id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
             try {
                 // Save to database
-                await db.run(`
+                await run(`
                     INSERT INTO messages (id, chat_id, sender_id, message_type, encrypted_content, file_url, nonce, reply_to)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 `, [messageId, chatId, senderId, message_type || 'text', encryptedContent, file_url || null, nonce, replyTo || null]);
 
-                // Also make sure they are in the participants table (if not already)
-                await db.run('INSERT OR IGNORE INTO chat_participants (chat_id, user_id) VALUES (?, ?)', [chatId, senderId]);
+                // Ensure sender is in participants
+                await run('INSERT OR IGNORE INTO chat_participants (chat_id, user_id) VALUES (?, ?)', [chatId, senderId]);
 
-                // Ensure the socket is in the room
+                // Ensure socket is in the room
                 socket.join(`chat:${chatId}`);
+
+                // Get sender nickname for notification
+                const sender = await get('SELECT nickname FROM users WHERE id = ?', [senderId]) as { nickname: string } | null;
 
                 const messageData = {
                     id: messageId,
                     chatId,
                     senderId,
+                    senderName: sender?.nickname || 'Unknown',
                     message_type: message_type || 'text',
                     encryptedContent,
                     file_url,
@@ -92,15 +99,14 @@ export function setupSocketHandlers(io: Server) {
                     timestamp: new Date().toISOString()
                 };
 
-                // Fetch all participants of this chat to guarantee delivery even if they haven't joined the chat room yet
-                const participants = await db.all('SELECT user_id FROM chat_participants WHERE chat_id = ?', [chatId]) as { user_id: string }[];
+                // Deliver to all participants
+                const participants = await query('SELECT user_id FROM chat_participants WHERE chat_id = ?', [chatId]) as { user_id: string }[];
 
                 if (participants && participants.length > 0) {
                     participants.forEach(p => {
                         io.to(`user:${p.user_id}`).emit('message:new', messageData);
                     });
                 } else {
-                    // Fallback to chat room if participants query fails
                     io.to(`chat:${chatId}`).emit('message:new', messageData);
                 }
             } catch (err) {
@@ -116,36 +122,85 @@ export function setupSocketHandlers(io: Server) {
         // Delete message
         socket.on('message:delete', async (data: { chatId: string, messageId: string, userId: string }) => {
             const { chatId, messageId, userId } = data;
-            const db = getDb() as any;
 
             try {
-                // Delete message where id matches and sender is the current user
-                await db.run('DELETE FROM messages WHERE id = ? AND chat_id = ? AND sender_id = ?', [messageId, chatId, userId]);
+                await run('DELETE FROM messages WHERE id = ? AND chat_id = ?', [messageId, chatId]);
 
-                // Broadcast deletion to chat room
-                io.to(`chat:${chatId}`).emit('message:deleted', {
-                    chatId,
-                    messageId
-                });
+                // Also clean up reactions for deleted message
+                try {
+                    await run('DELETE FROM message_reactions WHERE message_id = ?', [messageId]);
+                } catch (_) { /* reactions table may not exist yet */ }
+
+                io.to(`chat:${chatId}`).emit('message:deleted', { chatId, messageId });
             } catch (err) {
                 console.error('Error deleting message:', err);
             }
         });
 
+        // Delete chat
+        socket.on('chat:delete', async (data: { chatId: string }) => {
+            const { chatId } = data;
+            try {
+                // Delete messages for this chat
+                await run('DELETE FROM messages WHERE chat_id = ?', [chatId]);
+                // Delete chat participants
+                await run('DELETE FROM chat_participants WHERE chat_id = ?', [chatId]);
+                // Delete chat itself
+                await run('DELETE FROM chats WHERE id = ?', [chatId]);
+
+                // Emit to all users in room that the chat was deleted
+                io.to(`chat:${chatId}`).emit('chat:deleted', { chatId });
+
+                // Then let everyone leave the room
+                io.in(`chat:${chatId}`).socketsLeave(`chat:${chatId}`);
+            } catch (err) {
+                console.error('Error deleting chat:', err);
+            }
+        });
+
         // Mark messages as read
         socket.on('message:read', async (data: { chatId: string, userId: string }) => {
-            const db = getDb() as any;
             try {
-                // Update messages in database
-                await db.run('UPDATE messages SET status = ? WHERE chat_id = ? AND sender_id != ? AND status != ?', ['read', data.chatId, data.userId, 'read']);
+                await run('UPDATE messages SET status = ? WHERE chat_id = ? AND sender_id != ? AND status != ?', ['read', data.chatId, data.userId, 'read']);
 
-                // Broadcast to the chat room that messages were read by this user
                 socket.to(`chat:${data.chatId}`).emit('message:read', {
                     chatId: data.chatId,
                     userId: data.userId
                 });
             } catch (err) {
                 console.error('Error marking messages read:', err);
+            }
+        });
+
+        // Emoji reactions
+        socket.on('message:reaction', async (data: {
+            chatId: string;
+            messageId: string;
+            emoji: string;
+            userId: string;
+            action: 'add' | 'remove';
+        }) => {
+            const { chatId, messageId, emoji, userId, action } = data;
+
+            try {
+                if (action === 'add') {
+                    await run(
+                        'INSERT OR IGNORE INTO message_reactions (message_id, user_id, emoji) VALUES (?, ?, ?)',
+                        [messageId, userId, emoji]
+                    );
+                } else {
+                    await run(
+                        'DELETE FROM message_reactions WHERE message_id = ? AND user_id = ? AND emoji = ?',
+                        [messageId, userId, emoji]
+                    );
+                }
+
+                // Broadcast to all chat participants
+                io.to(`chat:${chatId}`).emit('message:reaction', { chatId, messageId, emoji, userId, action });
+            } catch (err) {
+                console.error('Error handling reaction:', err);
+                // Still broadcast even if DB fails
+                io.to(`chat:${chatId}`).emit('message:reaction', { chatId, messageId, emoji, userId, action });
             }
         });
 
@@ -165,11 +220,9 @@ export function setupSocketHandlers(io: Server) {
             if (userData) {
                 const userId = userData.userId;
 
-                // Remove from userSockets
                 if (userSockets[userId]) {
                     userSockets[userId] = userSockets[userId].filter(id => id !== socket.id);
 
-                    // If no more sockets, user is offline
                     if (userSockets[userId].length === 0) {
                         delete userSockets[userId];
                         socket.broadcast.emit('user:offline', userId);

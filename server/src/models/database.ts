@@ -91,12 +91,22 @@ export async function initDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
 
+      -- Message reactions
+      CREATE TABLE IF NOT EXISTS message_reactions (
+        message_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        emoji TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (message_id, user_id, emoji)
+      );
+
       -- Create indexes
       CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id);
       CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
       CREATE INDEX IF NOT EXISTS idx_participants_user ON chat_participants(user_id);
       CREATE INDEX IF NOT EXISTS idx_contacts_owner ON contacts(owner_id);
       CREATE INDEX IF NOT EXISTS idx_users_nickname ON users(nickname);
+      CREATE INDEX IF NOT EXISTS idx_reactions_message ON message_reactions(message_id);
     `);
 
     console.log('✓ PostgreSQL database initialized');
@@ -181,12 +191,22 @@ export async function initDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       );
 
+      -- Message reactions
+      CREATE TABLE IF NOT EXISTS message_reactions (
+        message_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        emoji TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (message_id, user_id, emoji)
+      );
+
       -- Create indexes
       CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id);
       CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
       CREATE INDEX IF NOT EXISTS idx_participants_user ON chat_participants(user_id);
       CREATE INDEX IF NOT EXISTS idx_contacts_owner ON contacts(owner_id);
       CREATE INDEX IF NOT EXISTS idx_users_nickname ON users(nickname);
+      CREATE INDEX IF NOT EXISTS idx_reactions_message ON message_reactions(message_id);
     `);
 
     console.log('✓ SQLite database initialized');
