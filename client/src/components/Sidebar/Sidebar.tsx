@@ -8,7 +8,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
-    const { user, chats, activeChat, setActiveChat, sidebarOpen, toggleSidebar, logout, theme, setTheme, onlineUsers } = useStore();
+    const { user, chats, activeChat, setActiveChat, sidebarOpen, toggleSidebar, logout, onlineUsers } = useStore();
     const [chatSearch, setChatSearch] = useState('');
     const [confirmLogout, setConfirmLogout] = useState(false);
     const [idCopied, setIdCopied] = useState(false);
@@ -21,17 +21,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
         return () => document.removeEventListener('click', handleClick);
     }, []);
 
-    const handleThemeToggle = () => {
-        if (theme === 'dark') setTheme('light');
-        else if (theme === 'light') setTheme('cyberpunk');
-        else setTheme('dark');
-    };
-
-    const getThemeIcon = () => {
-        if (theme === 'dark') return '🌙';
-        if (theme === 'light') return '☀️';
-        return '🌃';
-    };
 
     const formatTime = (date: Date) => {
         const now = new Date();
@@ -78,8 +67,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                     <img src="/logo.png" className="logo-icon" alt="Nyx Logo" style={{ width: '32px', height: '32px', borderRadius: '8px', marginRight: '8px', objectFit: 'cover' }} />
                     <span className="logo-text">Nyx</span>
                 </div>
-                <button className="btn btn-ghost new-chat-btn" onClick={onAddContact} title="Добавить контакт">
-                    ✏️
+                <button className="new-chat-btn-top" onClick={onAddContact} title="Создать новый чат">
+                    +
                 </button>
             </div>
 
@@ -95,13 +84,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
 
             <div className="chat-list">
                 {filteredChats.length === 0 ? (
-                    <div className="empty-state" style={{ padding: '40px 20px' }}>
-                        <div style={{ fontSize: '40px', marginBottom: '16px' }}>
-                            {chatSearch ? '🔍' : '💬'}
-                        </div>
+                    <div className="empty-chat-list">
+                        <div className="speech-bubble-icon">💬</div>
                         <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>
-                            {chatSearch ? 'Чаты не найдены' : 'Нет чатов. Добавьте контакт по ID, чтобы начать общение.'}
+                            {chatSearch ? 'Чаты не найдены' : 'Список чатов пуст. Самое время начать общение!'}
                         </p>
+                        {!chatSearch && (
+                            <button className="create-chat-btn-large" onClick={onAddContact}>
+                                ✨ Создать чат
+                            </button>
+                        )}
                     </div>
                 ) : (
                     filteredChats.map((chat) => {
@@ -221,14 +213,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                         window.location.reload();
                                     }}
                                 >
-                                    ✅ Да, выйти
+                                    ✅ Да
                                 </button>
                                 <button
                                     className="profile-action-btn"
                                     style={{ flex: 1 }}
                                     onClick={() => setConfirmLogout(false)}
                                 >
-                                    ❌ Отмена
+                                    ❌ Нет
                                 </button>
                             </div>
                         </div>
@@ -236,10 +228,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                         <div className="profile-actions">
                             <button
                                 className="profile-action-btn"
-                                onClick={handleThemeToggle}
-                                title="Сменить тему"
+                                onClick={() => alert('Настройки в разработке')}
+                                title="Настройки"
                             >
-                                {getThemeIcon()} Тема
+                                ⚙️ Настройки
                             </button>
                             <button
                                 className="profile-action-btn logout-btn"

@@ -1,12 +1,13 @@
 /* Nyx — Dark Theme Styles */
 
 :root {
-  /* Colors */
+  /* Colors - Premium Palette */
   --bg-primary: #0a0a0f;
-  --bg-secondary: #12121a;
-  --bg-tertiary: #1a1a25;
-  --bg-hover: #22222f;
-  --bg-active: #2a2a3a;
+  --bg-secondary: rgba(18, 18, 26, 0.7);
+  /* Translucent for glassmorphism */
+  --bg-tertiary: rgba(26, 26, 37, 0.5);
+  --bg-hover: rgba(108, 92, 231, 0.15);
+  --bg-active: rgba(108, 92, 231, 0.25);
 
   --text-primary: #ffffff;
   --text-secondary: #a0a0b0;
@@ -14,43 +15,29 @@
 
   --accent-primary: #6c5ce7;
   --accent-secondary: #a29bfe;
-  --accent-glow: rgba(108, 92, 231, 0.3);
+  --accent-glow: rgba(108, 92, 231, 0.5);
 
-  --success: #00b894;
-  --warning: #fdcb6e;
-  --danger: #e74c3c;
+  --primary: #6c5ce7;
+  --primary-glow: rgba(108, 92, 231, 0.6);
 
-  --border-color: #2a2a3a;
-  --border-radius: 12px;
-  --border-radius-sm: 8px;
-  --border-radius-lg: 16px;
+  --success: #00f3a0;
+  --warning: #ffd32a;
+  --danger: #ff4757;
 
-  /* Shadows */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px var(--accent-glow);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-radius: 16px;
+  --border-radius-sm: 10px;
+  --border-radius-lg: 24px;
+
+  /* Shadows & Glows */
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.7);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(20, 20, 30, 0.6);
 
   /* Fonts */
-  --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.875rem;
-  --font-size-md: 1rem;
-  --font-size-lg: 1.25rem;
-  --font-size-xl: 1.5rem;
-  --font-size-2xl: 2rem;
-
-  /* Spacing */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-
-  /* Transitions */
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.25s ease;
-  --transition-slow: 0.4s ease;
+  --font-family: 'Inter', 'Outfit', sans-serif;
 }
 
 /* Light Theme */
@@ -108,53 +95,36 @@
 }
 
 
-/* Cyberpunk Theme */
-[data-theme='cyberpunk'] {
-  --bg-primary: #0a0510;
-  --bg-secondary: #120922;
-  --bg-tertiary: #190d33;
-  --bg-hover: #220e44;
-  --bg-active: #2f1266;
+/* Starry Background Animation */
+@keyframes move-twink-back {
+  from {
+    background-position: 0 0;
+  }
 
-  --text-primary: #00f3ff;
-  --text-secondary: #ff00ba;
-  --text-muted: #5a5a7a;
-
-  --accent-primary: #ff00ba;
-  --accent-secondary: #00f3ff;
-  --accent-glow: rgba(255, 0, 186, 0.4);
-
-  --border-color: #ff00ba;
+  to {
+    background-position: -10000px 5000px;
+  }
 }
 
-[data-theme='cyberpunk'] .message.incoming {
-  background: #110515;
-  color: #00f3ff;
-  border: 1px solid #ff00ba;
-  box-shadow: 0 0 6px rgba(255, 0, 186, 0.2);
+.stars-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000 url('https://i.imgur.com/uCclv8A.png') repeat top center;
+  z-index: -2;
 }
 
-[data-theme='cyberpunk'] .message.incoming::before {
-  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 8 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 0L8 12L0 12C3.5 12 6 9 6 6C6 3 8 0 8 0Z' fill='%23110515'/%3E%3Cpath d='M0 12C2.5 12 5 10.5 5.5 7.5C5.8 5.7 6.5 3.5 8 2' stroke='%23ff00ba' stroke-width='1' fill='none'/%3E%3C/svg%3E") no-repeat;
-}
-
-[data-theme='cyberpunk'] .message.outgoing {
-  background: #1e053a;
-  color: #ff00ba;
-  border: 1px solid #00f3ff;
-  box-shadow: 0 0 6px rgba(0, 243, 255, 0.2);
-}
-
-[data-theme='cyberpunk'] .message.outgoing::before {
-  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 8 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0L0 12L8 12C4.5 12 2 9 2 6C2 3 0 0 0 0Z' fill='%231e053a'/%3E%3Cpath d='M8 12C5.5 12 3 10.5 2.5 7.5C2.2 5.7 1.5 3.5 0 2' stroke='%2300f3ff' stroke-width='1' fill='none'/%3E%3C/svg%3E") no-repeat;
-}
-
-[data-theme='cyberpunk'] .message-time {
-  color: rgba(0, 243, 255, 0.6);
-}
-
-[data-theme='cyberpunk'] .message-text {
-  color: inherit;
+.twinkling {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent url('https://i.imgur.com/Y7p7vH0.png') repeat top center;
+  z-index: -1;
+  animation: move-twink-back 200s linear infinite;
 }
 
 /* Reset & Base */
@@ -175,12 +145,20 @@ body,
 
 body {
   font-family: var(--font-family);
-  font-size: var(--font-size-md);
+  font-size: 16px;
   line-height: 1.5;
   color: var(--text-primary);
-  background: var(--bg-primary);
+  background-color: var(--bg-primary);
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+  position: relative;
 }
 
 /* Scrollbar */

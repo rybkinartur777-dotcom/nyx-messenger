@@ -414,10 +414,28 @@ export const ChatWindow: React.FC = () => {
                     </div>
                 </div>
                 <div className="empty-state">
-                    <div className="empty-state-icon">🔒</div>
-                    <div className="empty-state-title">Nyx Messenger</div>
-                    <div className="empty-state-text">Выберите чат или добавьте контакт по ID, чтобы начать защищённое общение</div>
-                    <div className="encryption-badge" style={{ marginTop: '16px' }}>🔐 Сквозное шифрование</div>
+                    <div style={{ fontSize: '80px', marginBottom: '10px', filter: 'drop-shadow(0 0 20px rgba(255, 170, 0, 0.3))' }}>🔐</div>
+                    <div className="empty-state-title" style={{ fontSize: '2.4rem', fontWeight: '800', marginBottom: '8px' }}>Nyx Messenger</div>
+                    <div className="empty-state-text" style={{ color: 'var(--text-secondary)', marginBottom: '30px', maxWidth: '400px', textAlign: 'center' }}>
+                        Выберите чат слева или создайте новый, чтобы начать защищённое общение.
+                    </div>
+
+                    <div className="how-it-works">
+                        <h3>КАК ЭТО РАБОТАЕТ:</h3>
+                        <ol>
+                            <li>Копируешь <b>свой ID</b> в настройках профиля.</li>
+                            <li>Отправляешь другу через любой удобный канал.</li>
+                            <li>Вы общаетесь в полностью зашифрованных чатах.</li>
+                        </ol>
+                    </div>
+
+                    <button className="start-chat-btn" onClick={() => (document.querySelector('.create-chat-btn-large') as HTMLButtonElement)?.click()}>
+                        🔥 Начать чат
+                    </button>
+
+                    <div className="encryption-badge" style={{ marginTop: '30px', opacity: 0.6, fontSize: '12px', border: '1px solid var(--border-color)', padding: '4px 12px', borderRadius: '20px' }}>
+                        СКВОЗНОЕ ШИФРОВАНИЕ
+                    </div>
                 </div>
             </div>
         );

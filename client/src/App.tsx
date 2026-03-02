@@ -112,6 +112,9 @@ const App: React.FC = () => {
 
     return (
         <div className="app">
+            <div className="stars-container"></div>
+            <div className="twinkling"></div>
+
             <Sidebar onAddContact={() => setShowAddContact(true)} />
             <ChatWindow />
             <AddContactModal
