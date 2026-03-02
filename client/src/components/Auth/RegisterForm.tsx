@@ -98,122 +98,131 @@ export const RegisterForm: React.FC = () => {
 
     if (generatedId) {
         return (
-            <div className="auth-container">
-                <div className="auth-card">
-                    <div className="auth-logo">
-                        <img src="/logo.png" className="logo-icon" alt="Nyx Logo" style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />
-                        <div className="logo-text">Nyx</div>
-                    </div>
+            <div className="app auth-page">
+                <div className="stars-container"></div>
+                <div className="twinkling"></div>
+                <div className="auth-container">
+                    <div className="auth-card">
+                        <div className="auth-logo">
+                            <img src="/logo.png" className="logo-icon" alt="Nyx Logo" style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />
+                            <div className="logo-text">Nyx</div>
+                        </div>
 
-                    <h2 style={{ textAlign: 'center', marginBottom: '16px', color: 'var(--success)' }}>
-                        ✓ Регистрация завершена!
-                    </h2>
+                        <h2 style={{ textAlign: 'center', marginBottom: '16px', color: 'var(--success)' }}>
+                            ✓ Регистрация завершена!
+                        </h2>
 
-                    <div className="user-id-display">
-                        <div className="user-id-label">Ваш уникальный ID</div>
-                        <div className="user-id-value">{generatedId}</div>
-                        <button className="btn btn-secondary user-id-copy" onClick={copyId}>
-                            📋 Скопировать ID
+                        <div className="user-id-display">
+                            <div className="user-id-label">Ваш уникальный ID</div>
+                            <div className="user-id-value">{generatedId}</div>
+                            <button className="btn btn-secondary user-id-copy" onClick={copyId}>
+                                📋 Скопировать ID
+                            </button>
+                        </div>
+
+                        <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px' }}>
+                            Сохраните этот ID! Он нужен для добавления в контакты.
+                        </p>
+
+                        <button
+                            className="btn btn-primary auth-submit"
+                            onClick={() => window.location.reload()}
+                        >
+                            Начать общение →
                         </button>
                     </div>
-
-                    <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px' }}>
-                        Сохраните этот ID! Он нужен для добавления в контакты.
-                    </p>
-
-                    <button
-                        className="btn btn-primary auth-submit"
-                        onClick={() => window.location.reload()}
-                    >
-                        Начать общение →
-                    </button>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="auth-container">
-            <div className="auth-card">
-                <div className="auth-logo">
-                    <img src="/logo.png" className="logo-icon" alt="Nyx Logo" style={{ width: '80px', height: '80px', borderRadius: '16px', marginBottom: '16px', boxShadow: '0 0 20px rgba(0, 243, 255, 0.2)', objectFit: 'cover' }} />
-                    <div className="logo-text" style={{ fontSize: '2rem' }}>Nyx</div>
-                </div>
+        <div className="app auth-page">
+            <div className="stars-container"></div>
+            <div className="twinkling"></div>
 
-                <p className="auth-title">
-                    Анонимный защищённый мессенджер
-                </p>
+            <div className="auth-container">
+                <div className="auth-card">
+                    <div className="auth-logo">
+                        <img src="/logo.png" className="logo-icon" alt="Nyx Logo" style={{ width: '80px', height: '80px', borderRadius: '16px', marginBottom: '16px', boxShadow: '0 0 20px rgba(0, 243, 255, 0.2)', objectFit: 'cover' }} />
+                        <div className="logo-text" style={{ fontSize: '2rem' }}>Nyx</div>
+                    </div>
 
-                <form onSubmit={handleRegister}>
-                    <div className="form-group">
-                        <label className="form-label">Выберите никнейм</label>
-                        <input
-                            type="text"
-                            className={`form-input ${error ? 'error' : ''}`}
-                            placeholder="Ваш никнейм"
-                            value={nickname}
-                            onChange={(e) => setNickname(e.target.value)}
+                    <p className="auth-title">
+                        Анонимный защищённый мессенджер
+                    </p>
+
+                    <form onSubmit={handleRegister}>
+                        <div className="form-group">
+                            <label className="form-label">Выберите никнейм</label>
+                            <input
+                                type="text"
+                                className={`form-input ${error ? 'error' : ''}`}
+                                placeholder="Ваш никнейм"
+                                value={nickname}
+                                onChange={(e) => setNickname(e.target.value)}
+                                disabled={isLoading}
+                                autoFocus
+                            />
+                            {error && <div className="form-error">{error}</div>}
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Выберите аватар</label>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', justifyContent: 'center' }}>
+                                {AVATARS.map((avatar, index) => (
+                                    <img
+                                        key={index}
+                                        src={avatar}
+                                        alt={`Avatar ${index + 1}`}
+                                        onClick={() => setSelectedAvatar(avatar)}
+                                        style={{
+                                            width: '48px',
+                                            height: '48px',
+                                            borderRadius: '50%',
+                                            cursor: 'pointer',
+                                            border: selectedAvatar === avatar ? '2px solid var(--primary)' : '2px solid transparent',
+                                            opacity: selectedAvatar === avatar ? 1 : 0.6,
+                                            transition: 'all 0.2s',
+                                            objectFit: 'cover'
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        <div style={{
+                            background: 'var(--bg-tertiary)',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            marginBottom: '16px',
+                            fontSize: '13px',
+                            color: 'var(--text-secondary)'
+                        }}>
+                            <div className="encryption-badge" style={{ marginBottom: '8px' }}>
+                                🔐 E2E шифрование
+                            </div>
+                            • Без номера телефона и email<br />
+                            • Без сбора персональных данных<br />
+                            • Уникальный ID генерируется автоматически
+                        </div>
+
+                        <button
+                            type="submit"
+                            className="btn btn-primary auth-submit"
                             disabled={isLoading}
-                            autoFocus
-                        />
-                        {error && <div className="form-error">{error}</div>}
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label">Выберите аватар</label>
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', justifyContent: 'center' }}>
-                            {AVATARS.map((avatar, index) => (
-                                <img
-                                    key={index}
-                                    src={avatar}
-                                    alt={`Avatar ${index + 1}`}
-                                    onClick={() => setSelectedAvatar(avatar)}
-                                    style={{
-                                        width: '48px',
-                                        height: '48px',
-                                        borderRadius: '50%',
-                                        cursor: 'pointer',
-                                        border: selectedAvatar === avatar ? '2px solid var(--primary)' : '2px solid transparent',
-                                        opacity: selectedAvatar === avatar ? 1 : 0.6,
-                                        transition: 'all 0.2s',
-                                        objectFit: 'cover'
-                                    }}
-                                />
-                            ))}
-                        </div>
-                    </div>
-
-                    <div style={{
-                        background: 'var(--bg-tertiary)',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        marginBottom: '16px',
-                        fontSize: '13px',
-                        color: 'var(--text-secondary)'
-                    }}>
-                        <div className="encryption-badge" style={{ marginBottom: '8px' }}>
-                            🔐 E2E шифрование
-                        </div>
-                        • Без номера телефона и email<br />
-                        • Без сбора персональных данных<br />
-                        • Уникальный ID генерируется автоматически
-                    </div>
-
-                    <button
-                        type="submit"
-                        className="btn btn-primary auth-submit"
-                        disabled={isLoading}
-                    >
-                        {isLoading ? (
-                            <>
-                                <span className="spinner" style={{ width: '20px', height: '20px' }}></span>
-                                Создание...
-                            </>
-                        ) : (
-                            'Создать аккаунт'
-                        )}
-                    </button>
-                </form>
+                        >
+                            {isLoading ? (
+                                <>
+                                    <span className="spinner" style={{ width: '20px', height: '20px' }}></span>
+                                    Создание...
+                                </>
+                            ) : (
+                                'Создать аккаунт'
+                            )}
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     );
