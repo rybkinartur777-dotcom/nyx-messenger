@@ -34,6 +34,7 @@ export interface Message {
     replySender?: string;   // Nickname of sender being replied to
     expiresAt?: Date;
     reactions?: Reaction[];
+    selfDestruct?: boolean;
 }
 
 export interface EncryptedMessage {
@@ -47,6 +48,7 @@ export interface EncryptedMessage {
     timestamp: Date;
     expiresAt?: Date;
     replyTo?: string;
+    selfDestruct?: boolean;
 }
 
 // Chat types

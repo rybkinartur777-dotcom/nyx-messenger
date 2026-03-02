@@ -70,6 +70,7 @@ export async function initDatabase(): Promise<void> {
         reply_to VARCHAR(255),
         expires_at TIMESTAMP,
         status VARCHAR(50) DEFAULT 'sent',
+        self_destruct INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
@@ -169,6 +170,7 @@ export async function initDatabase(): Promise<void> {
         reply_to TEXT,
         expires_at TEXT,
         status TEXT DEFAULT 'sent',
+        self_destruct INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
       );

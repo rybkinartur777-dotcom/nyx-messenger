@@ -52,7 +52,8 @@ class SocketService {
                 replyTo: data.replyTo,
                 replyContent,
                 replySender,
-                reactions: []
+                reactions: [],
+                selfDestruct: data.selfDestruct
             };
 
             addMessage(data.chatId, message);
@@ -148,7 +149,8 @@ class SocketService {
         fileUrl?: string,
         replyTo?: string,
         replyContent?: string,
-        replySender?: string
+        replySender?: string,
+        selfDestruct?: boolean
     ) {
         if (!this.socket?.connected) return;
 
@@ -163,7 +165,8 @@ class SocketService {
             file_url: fileUrl,
             nonce: 'dummy_nonce',
             replyTo,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            selfDestruct
         };
 
         this.socket.emit('message:send', messageData);
@@ -181,7 +184,8 @@ class SocketService {
             replyTo,
             replyContent,
             replySender,
-            reactions: []
+            reactions: [],
+            selfDestruct
         };
 
         addMessage(chatId, localMessage);

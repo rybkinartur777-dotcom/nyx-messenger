@@ -22,6 +22,9 @@ interface AppState {
     isLoading: boolean;
     sidebarOpen: boolean;
     theme: 'dark' | 'light' | 'cyberpunk';
+    lang: 'ru' | 'en';
+    deletedMessageIds: Set<string>;
+    pinnedMessages: Record<string, Message[]>; // chatId -> pinned messages
 
     // Actions
     setUser: (user: User | null) => void;
@@ -44,6 +47,10 @@ interface AppState {
     isUserOnline: (userId: string) => boolean;
     addReaction: (chatId: string, messageId: string, emoji: string, userId: string) => void;
     removeReaction: (chatId: string, messageId: string, emoji: string, userId: string) => void;
+    pinMessage: (chatId: string, message: Message) => void;
+    unpinMessage: (chatId: string, messageId: string) => void;
+    deleteMessageLocal: (messageId: string) => void;
+    setLanguage: (lang: 'ru' | 'en') => void;
 }
 
 export const useStore = create<AppState>()(
@@ -60,6 +67,9 @@ export const useStore = create<AppState>()(
             isLoading: false,
             sidebarOpen: true,
             theme: 'dark',
+            lang: 'ru',
+            deletedMessageIds: new Set(),
+            pinnedMessages: {},
 
             // Actions
             setUser: (user) => set({
@@ -97,6 +107,7 @@ export const useStore = create<AppState>()(
             }),
 
             addMessage: (chatId, message) => set((state) => {
+                if (state.deletedMessageIds.has(message.id)) return state;
                 const existingMessages = state.messages[chatId] || [];
                 const messageExists = existingMessages.findIndex(m => m.id === message.id);
 
@@ -122,7 +133,7 @@ export const useStore = create<AppState>()(
             setMessages: (chatId, messages) => set((state) => ({
                 messages: {
                     ...state.messages,
-                    [chatId]: messages
+                    [chatId]: messages.filter(m => !state.deletedMessageIds.has(m.id))
                 }
             })),
 
@@ -223,6 +234,35 @@ export const useStore = create<AppState>()(
                     })
                 }
             })),
+
+            pinMessage: (chatId, message) => set((state) => {
+                const currentPins = state.pinnedMessages[chatId] || [];
+                if (currentPins.find(m => m.id === message.id)) return state;
+                return {
+                    pinnedMessages: {
+                        ...state.pinnedMessages,
+                        [chatId]: [...currentPins, message]
+                    }
+                };
+            }),
+
+            unpinMessage: (chatId, messageId) => set((state) => {
+                const currentPins = state.pinnedMessages[chatId] || [];
+                return {
+                    pinnedMessages: {
+                        ...state.pinnedMessages,
+                        [chatId]: currentPins.filter(m => m.id !== messageId)
+                    }
+                };
+            }),
+
+            deleteMessageLocal: (messageId) => set((state) => {
+                const newDeleted = new Set(state.deletedMessageIds);
+                newDeleted.add(messageId);
+                return { deletedMessageIds: newDeleted };
+            }),
+
+            setLanguage: (lang) => set({ lang }),
         }),
         {
             name: 'nyx-storage',
@@ -232,7 +272,15 @@ export const useStore = create<AppState>()(
                 contacts: state.contacts,
                 chats: state.chats,
                 theme: state.theme,
+                lang: state.lang,
+                pinnedMessages: state.pinnedMessages,
+                deletedMessageIds: Array.from(state.deletedMessageIds), // persists as array
             }),
+            onRehydrateStorage: () => (state) => {
+                if (state && Array.isArray(state.deletedMessageIds)) {
+                    state.deletedMessageIds = new Set(state.deletedMessageIds);
+                }
+            }
         }
     )
 );

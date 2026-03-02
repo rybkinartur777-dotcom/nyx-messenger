@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useStore } from '../../store/useStore';
 import { socketService } from '../../socket/socketService';
 import { API_BASE_URL } from '../../config';
+import { T } from '../../locales';
 import { Message } from '../../types';
 
 import AudioPlayer from './AudioPlayer';
@@ -10,7 +11,10 @@ const EMOJI_LIST = ['❤️', '👍', '😂', '😮', '😢', '🔥', '💯', '�
 const STICKERS = ['😂', '❤️', '🔥', '👍', '💀', '🤡', '😭', '🥺', '🗿', '☕', '🐱', '🐶', '😎', '🎉', '🧠', '🤬', '💩', '👽', '👾', '🤖', '👑', '🤌'];
 
 export const ChatWindow: React.FC = () => {
-    const { activeChat, user, messages, setMessages, markMessagesAsRead, toggleSidebar, onlineUsers } = useStore();
+    const {
+        activeChat, user, messages, setMessages, markMessagesAsRead, onlineUsers,
+        pinMessage, unpinMessage, pinnedMessages, lang, deleteMessageLocal, toggleSidebar
+    } = useStore();
     const [inputValue, setInputValue] = useState('');
     const [showStickers, setShowStickers] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -23,6 +27,7 @@ export const ChatWindow: React.FC = () => {
     const [emojiPickerFor, setEmojiPickerFor] = useState<string | null>(null);
     const [emojiPickerPos, setEmojiPickerPos] = useState<{ x: number; y: number } | null>(null);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: Message } | null>(null);
+    const [isSelfDestruct, setIsSelfDestruct] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -93,7 +98,8 @@ export const ChatWindow: React.FC = () => {
                         timestamp: new Date(m.timestamp),
                         status: m.status || (m.senderId !== user?.id ? 'read' : 'delivered'),
                         replyTo: m.replyTo,
-                        reactions: m.reactions || []
+                        reactions: m.reactions || [],
+                        selfDestruct: m.self_destruct || m.selfDestruct
                     }));
                     setMessages(activeChat.id, formattedMessages);
 
@@ -153,24 +159,58 @@ export const ChatWindow: React.FC = () => {
     const handleSend = () => {
         if (!activeChat || !user) return;
 
+        const currentSelfDestruct = isSelfDestruct;
+
         if (imagePreview) {
             socketService.sendMessage(
                 activeChat.id, user.id, inputValue.trim() || '[Изображение]', 'image', imagePreview,
-                replyTo?.id, replyTo?.content, replyTo?.senderId === user.id ? 'Вы' : activeChat.name
+                replyTo?.id, replyTo?.content, replyTo?.senderId === user.id ? 'Вы' : activeChat.name,
+                currentSelfDestruct
             );
             setImagePreview(null);
             setInputValue('');
             setReplyTo(null);
+            setIsSelfDestruct(false);
             return;
         }
 
         if (!inputValue.trim()) return;
         socketService.sendMessage(
             activeChat.id, user.id, inputValue.trim(), 'text', undefined,
-            replyTo?.id, replyTo?.content, replyTo?.senderId === user.id ? 'Вы' : activeChat.name
+            replyTo?.id, replyTo?.content, replyTo?.senderId === user.id ? 'Вы' : activeChat.name,
+            currentSelfDestruct
         );
         setInputValue('');
         setReplyTo(null);
+        setIsSelfDestruct(false);
+    };
+
+    // Self-destruct timer logic
+    useEffect(() => {
+        const socket = socketService.getSocket();
+        if (!socket) return;
+
+        const handleSelfDestruct = (data: { messageId: string, delay: number }) => {
+            setTimeout(() => {
+                deleteMessageLocal(data.messageId);
+            }, data.delay);
+        };
+
+        socket.on('message:burn', handleSelfDestruct);
+        return () => {
+            socket.off('message:burn', handleSelfDestruct);
+        };
+    }, []);
+
+    // Link preview helpers
+    const getYoutubeId = (url: string) => {
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    };
+
+    const isImageUrl = (url: string) => {
+        return url.match(/\.(jpeg|jpg|gif|png|webp)$/) != null || url.includes('images.unsplash.com');
     };
 
     const handleSendSticker = (sticker: string) => {
@@ -421,6 +461,24 @@ export const ChatWindow: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Pinned Messages Area */}
+                {activeChat && pinnedMessages[activeChat.id]?.length > 0 && (
+                    <div className="pinned-messages-bar">
+                        <div className="pinned-icon">📌</div>
+                        <div className="pinned-carousel">
+                            {pinnedMessages[activeChat.id].map((m) => (
+                                <div key={m.id} className="pinned-item-mini" onClick={() => {
+                                    const element = document.getElementById(`msg-${m.id}`);
+                                    element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                }}>
+                                    <div className="pinned-content">{m.content.slice(0, 50)}{m.content.length > 50 ? '...' : ''}</div>
+                                    <button className="unpin-btn" onClick={(e) => { e.stopPropagation(); unpinMessage(activeChat.id, m.id); }}>✕</button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* Search bar */}
                 {searchMode && (
                     <div className="search-bar-inline">
@@ -526,9 +584,25 @@ export const ChatWindow: React.FC = () => {
                                             </div>
                                         )}
 
-                                        {/* Text */}
+                                        {/* Text with Previews */}
                                         {msg.type === 'text' && (
-                                            <div className="message-text">{msg.content}</div>
+                                            <div className="message-text">
+                                                {msg.content}
+                                                {/* YouTube Preview */}
+                                                {getYoutubeId(msg.content) && (
+                                                    <div className="link-preview youtube">
+                                                        <iframe
+                                                            width="100%" height="180"
+                                                            src={`https://www.youtube.com/embed/${getYoutubeId(msg.content)}`}
+                                                            frameBorder="0" allowFullScreen style={{ borderRadius: '8px', marginTop: '8px' }}
+                                                        ></iframe>
+                                                    </div>
+                                                )}
+                                                {/* Link Image Preview */}
+                                                {!getYoutubeId(msg.content) && msg.content.match(/https?:\/\/\S+/g)?.map(url => isImageUrl(url) && (
+                                                    <img key={url} src={url} alt="Link Preview" style={{ maxWidth: '100%', borderRadius: '8px', marginTop: '8px' }} />
+                                                ))}
+                                            </div>
                                         )}
 
                                         {/* Sticker */}
@@ -642,6 +716,12 @@ export const ChatWindow: React.FC = () => {
                             </svg>
                             Копировать
                         </button>
+                        <button className="context-menu-item" onClick={() => { pinMessage(activeChat.id, contextMenu.message); setContextMenu(null); }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            </svg>
+                            {T[lang].pin}
+                        </button>
                         <button className="context-menu-item danger" onClick={() => { socketService.deleteMessage(activeChat.id, contextMenu.message.id, user!.id); setContextMenu(null); }}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="3 6 5 6 21 6"></polyline>
@@ -695,6 +775,15 @@ export const ChatWindow: React.FC = () => {
                             </button>
                         </div>
                         <textarea className="message-input" placeholder={replyTo ? `Ответить ${replyTo.senderId === user?.id ? 'себе' : activeChat.name}...` : 'Введите сообщение...'} value={inputValue} onChange={handleInputChange} onKeyPress={handleKeyPress} rows={1} style={{ display: isRecording ? 'none' : undefined }} />
+
+                        <button
+                            className={`btn btn-ghost sd-toggle ${isSelfDestruct ? 'active' : ''}`}
+                            title={T[lang].selfDestruct}
+                            onClick={() => setIsSelfDestruct(!isSelfDestruct)}
+                            style={{ display: isRecording ? 'none' : 'inline-flex', color: isSelfDestruct ? '#ff4b2b' : 'inherit' }}
+                        >
+                            🔥
+                        </button>
 
                         <div style={{ position: 'relative' }}>
                             <button className={`btn btn-ghost ${showStickers ? 'active' : ''}`} title="Стикеры" style={{ display: isRecording ? 'none' : 'inline-flex' }} onClick={(e) => { e.stopPropagation(); setShowStickers(!showStickers); }}>

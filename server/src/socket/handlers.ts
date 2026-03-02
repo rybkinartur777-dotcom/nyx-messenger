@@ -65,17 +65,18 @@ export function setupSocketHandlers(io: Server) {
             file_url?: string;
             nonce: string;
             replyTo?: string;
+            selfDestruct?: boolean;
         }) => {
-            const { chatId, senderId, message_type, encryptedContent, file_url, nonce, replyTo } = data;
+            const { chatId, senderId, message_type, encryptedContent, file_url, nonce, replyTo, selfDestruct } = data;
 
             const messageId = data.id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
             try {
                 // Save to database
                 await run(`
-                    INSERT INTO messages (id, chat_id, sender_id, message_type, encrypted_content, file_url, nonce, reply_to)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                `, [messageId, chatId, senderId, message_type || 'text', encryptedContent, file_url || null, nonce, replyTo || null]);
+                    INSERT INTO messages (id, chat_id, sender_id, message_type, encrypted_content, file_url, nonce, reply_to, self_destruct)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `, [messageId, chatId, senderId, message_type || 'text', encryptedContent, file_url || null, nonce, replyTo || null, selfDestruct ? 1 : 0]);
 
                 // Ensure sender is in participants
                 try {
@@ -100,6 +101,7 @@ export function setupSocketHandlers(io: Server) {
                     file_url,
                     nonce,
                     replyTo,
+                    selfDestruct,
                     timestamp: new Date().toISOString()
                 };
 
@@ -138,6 +140,25 @@ export function setupSocketHandlers(io: Server) {
                 io.to(`chat:${chatId}`).emit('message:deleted', { chatId, messageId });
             } catch (err) {
                 console.error('Error deleting message:', err);
+            }
+        });
+
+        // Message read - for self-destruct
+        socket.on('message:read', async (data: { chatId: string, messageId: string, userId: string }) => {
+            const { chatId, messageId, userId } = data;
+
+            // Check if this message should self-destruct
+            try {
+                // In a real app we'd check the DB, but for now we broadcast the burn event
+                // The client will handle local deletion
+                io.to(`chat:${chatId}`).emit('message:burn', { messageId, delay: 5000 });
+
+                // Also delete from DB after delay
+                setTimeout(async () => {
+                    await run('DELETE FROM messages WHERE id = ?', [messageId]);
+                }, 6000);
+            } catch (err) {
+                console.error('Error in self-destruct read handler:', err);
             }
         });
 

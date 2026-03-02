@@ -7,11 +7,13 @@ import { ChatWindow } from './components/Chat/ChatWindow';
 import { AddContactModal } from './components/Contacts/AddContactModal';
 import { socketService } from './socket/socketService';
 import { API_BASE_URL } from './config';
+import { T } from './locales';
 
 const App: React.FC = () => {
-    const { isAuthenticated, user, setChats, theme } = useStore();
+    const { isAuthenticated, user, setChats, theme, lang } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [showAddContact, setShowAddContact] = useState(false);
+    const [isNinjaMode, setIsNinjaMode] = useState(false);
 
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme || 'dark');
@@ -44,6 +46,34 @@ const App: React.FC = () => {
 
         initApp();
     }, [user, setChats]);
+
+    // Ninja Mode logic
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (isNinjaMode) {
+                setIsNinjaMode(false);
+                return;
+            }
+            // Ctrl + Shift + H for Ninja Mode
+            if (e.ctrlKey && e.shiftKey && (e.key === 'H' || e.key === 'h' || e.key === 'р' || e.key === 'Р')) {
+                setIsNinjaMode(true);
+            }
+        };
+
+        const idleTimer = setTimeout(() => {
+            if (isAuthenticated && !isNinjaMode) {
+                setIsNinjaMode(true);
+            }
+        }, 5 * 60 * 1000); // 5 minutes idle
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('mousemove', () => clearTimeout(idleTimer));
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            clearTimeout(idleTimer);
+        };
+    }, [isNinjaMode, isAuthenticated]);
 
     useEffect(() => {
         if (!isAuthenticated || !user?.id) return;
@@ -88,6 +118,22 @@ const App: React.FC = () => {
                 isOpen={showAddContact}
                 onClose={() => setShowAddContact(false)}
             />
+
+            {isNinjaMode && (
+                <div
+                    style={{
+                        position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+                        background: 'rgba(10, 10, 15, 0.95)', backdropFilter: 'blur(40px)',
+                        zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#4e54c8', fontSize: '1.5rem', fontWeight: 'bold', cursor: 'pointer'
+                    }}
+                    onClick={() => setIsNinjaMode(false)}
+                >
+                    <div className="ninja-lock-content">
+                        🔒 {T[lang].ninjaLockedText}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
