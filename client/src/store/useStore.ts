@@ -23,6 +23,7 @@ interface AppState {
     sidebarOpen: boolean;
     theme: 'dark' | 'light' | 'cyberpunk';
     lang: 'ru' | 'en';
+    stealthMode: boolean; // Hide online status and read receipts
     deletedMessageIds: Set<string>;
     pinnedMessages: Record<string, Message[]>; // chatId -> pinned messages
 
@@ -51,6 +52,7 @@ interface AppState {
     unpinMessage: (chatId: string, messageId: string) => void;
     deleteMessageLocal: (messageId: string) => void;
     setLanguage: (lang: 'ru' | 'en') => void;
+    toggleStealthMode: () => void;
 }
 
 export const useStore = create<AppState>()(
@@ -68,6 +70,7 @@ export const useStore = create<AppState>()(
             sidebarOpen: true,
             theme: 'dark',
             lang: 'ru',
+            stealthMode: false,
             deletedMessageIds: new Set(),
             pinnedMessages: {},
 
@@ -263,6 +266,7 @@ export const useStore = create<AppState>()(
             }),
 
             setLanguage: (lang) => set({ lang }),
+            toggleStealthMode: () => set((state) => ({ stealthMode: !state.stealthMode })),
         }),
         {
             name: 'nyx-storage',
@@ -273,6 +277,7 @@ export const useStore = create<AppState>()(
                 chats: state.chats,
                 theme: state.theme,
                 lang: state.lang,
+                stealthMode: state.stealthMode,
                 pinnedMessages: state.pinnedMessages,
                 deletedMessageIds: Array.from(state.deletedMessageIds), // persists as array
             }),

@@ -1,44 +1,4 @@
-export const T: any = {
-    ru: {
-        selfDestruct: 'Самоуничтожение',
-        ninjaMode: 'Режим ниндзя',
-        ninjaLockedText: 'Nyx заблокирован. Нажмите любую клавишу для разблокировки.',
-        pin: 'Закрепить',
-        unpin: 'Открепить',
-        pinnedMessages: 'Закрепленные сообщения',
-        burnAfterReading: 'Сообщение исчезнет после прочтения',
-        deletedMessage: 'Сообщение удалено',
-        noPinnedMessages: 'Нет закрепленных сообщений',
-        reply: 'Ответить',
-        copy: 'Копировать',
-        delete: 'Удалить',
-        searching: 'Поиск...',
-        contacts: 'Контакты',
-        chats: 'Чаты',
-        settings: 'Настройки',
-        logout: 'Выход',
-        theme: 'Тема',
-        language: 'Язык'
-    },
-    en: {
-        selfDestruct: 'Self-destruct',
-        ninjaMode: 'Ninja Mode',
-        ninjaLockedText: 'Nyx is locked. Press any key to unlock.',
-        pin: 'Pin',
-        unpin: 'Unpin',
-        pinnedMessages: 'Pinned Messages',
-        burnAfterReading: 'Message will vanish after being read',
-        deletedMessage: 'Message deleted',
-        noPinnedMessages: 'No pinned messages',
-        reply: 'Reply',
-        copy: 'Copy',
-        delete: 'Delete',
-        searching: 'Searching...',
-        contacts: 'Contacts',
-        chats: 'Chats',
-        settings: 'Settings',
-        logout: 'Logout',
-        theme: 'Theme',
-        language: 'Language'
-    }
-};
+import en from './locales/en.json';
+import ru from './locales/ru.json';
+
+export const T: any = { en, ru };

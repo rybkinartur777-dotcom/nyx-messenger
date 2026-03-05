@@ -1,11 +1,10 @@
-﻿/* Nyx вЂ” Dark Theme Styles */
+﻿/* Nyx — Dark Theme Styles */
 
 :root {
   /* Colors - Premium Palette */
   --bg-primary: #0a0a0f;
   --bg-secondary: rgba(18, 18, 26, 0.7);
-  /* Translucent for glassmorphism */
-  --bg-tertiary: rgba(26, 26, 37, 0.5);
+  --bg-tertiary: rgba(26, 26, 37, 0.3);
   --bg-hover: rgba(108, 92, 231, 0.15);
   --bg-active: rgba(108, 92, 231, 0.25);
 
@@ -33,8 +32,8 @@
   --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.7);
-  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
-  --glass-bg: rgba(20, 20, 30, 0.6);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.05);
+  --glass-bg: rgba(15, 15, 22, 0.85);
 
   /* Fonts */
   --font-family: 'Inter', 'Outfit', sans-serif;
@@ -53,7 +52,6 @@
   --text-muted: #8a8d91;
 
   --accent-primary: #4a6ee0;
-  /* A slightly more readable blue/purple for light mode */
   --accent-secondary: #6b8af0;
   --accent-glow: rgba(74, 110, 224, 0.2);
 
@@ -114,6 +112,8 @@
   height: 100%;
   background: #000 url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/1231630/stars.png') repeat top center;
   z-index: -2;
+  opacity: 0.5;
+  /* Уменьшена яркость звезд */
 }
 
 .twinkling {
@@ -125,6 +125,22 @@
   background: transparent url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/1231630/twinkling.png') repeat top center;
   z-index: -1;
   animation: move-twink-back 200s linear infinite;
+  opacity: 0.3;
+  /* Уменьшена яркость частиц */
+}
+
+/* Dark overlay */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.15);
+  /* Темный overlay 15% */
+  z-index: -1;
+  pointer-events: none;
 }
 
 /* Reset & Base */
@@ -335,18 +351,35 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: var(--border-radius);
+  padding: 12px 14px;
+  margin: 4px 8px;
+  border-radius: var(--border-radius-sm);
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .chat-item:hover {
   background: var(--bg-hover);
+  transform: scale(1.02);
 }
 
 .chat-item.active {
   background: var(--bg-active);
+  box-shadow: 0 0 15px rgba(108, 92, 231, 0.1);
+}
+
+.chat-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10%;
+  height: 80%;
+  width: 4px;
+  background: var(--accent-primary);
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 
 .avatar {
@@ -487,13 +520,15 @@ body {
 
 .chat-header {
   padding: var(--spacing-md) var(--spacing-lg);
-  background: var(--bg-secondary);
+  background: rgba(18, 18, 26, 0.85);
+  backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
   position: relative;
-  z-index: 10;
+  z-index: 20;
   flex-shrink: 0;
 }
 
@@ -515,6 +550,26 @@ body {
   color: var(--success);
 }
 
+.header-action-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.header-action-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  transform: scale(1.05);
+}
+
 /* Messages */
 .messages-container {
   flex: 1;
@@ -522,11 +577,13 @@ body {
   padding: var(--spacing-lg);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   position: relative;
   z-index: 10;
   min-height: 0;
-  /* Telegram uses smaller gaps between messages */
+  background: rgba(10, 10, 15, 0.4);
+  /* Glassmorphism/blur effect */
+  backdrop-filter: blur(5px);
 }
 
 /* Telegram-style wrapper: bubble + reactions below it */
@@ -589,10 +646,12 @@ body {
 }
 
 .message.incoming {
-  background: #212121;
+  background: linear-gradient(135deg, rgba(40, 40, 45, 0.9), rgba(30, 30, 35, 0.9));
   border-bottom-left-radius: 4px;
   color: #fff;
   margin-left: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .message.incoming::before {
@@ -602,14 +661,16 @@ body {
   bottom: 0px;
   width: 8px;
   height: 12px;
-  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 8 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 0L8 12L0 12C3.5 12 6 9 6 6C6 3 8 0 8 0Z' fill='%23212121'/%3E%3C/svg%3E") no-repeat;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 8 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 0L8 12L0 12C3.5 12 6 9 6 6C6 3 8 0 8 0Z' fill='%2328282d'/%3E%3C/svg%3E") no-repeat;
 }
 
 .message.outgoing {
-  background: #8774e1;
+  background: linear-gradient(135deg, rgba(108, 92, 231, 0.9), rgba(85, 70, 200, 0.9));
   border-bottom-right-radius: 4px;
   color: #fff;
   margin-right: 10px;
+  box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+  border: 1px solid rgba(108, 92, 231, 0.2);
 }
 
 .message.outgoing::before {
@@ -619,7 +680,7 @@ body {
   bottom: 0px;
   width: 8px;
   height: 12px;
-  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 8 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0L0 12L8 12C4.5 12 2 9 2 6C2 3 0 0 0 0Z' fill='%238774e1'/%3E%3C/svg%3E") no-repeat;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 8 12' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0L0 12L8 12C4.5 12 2 9 2 6C2 3 0 0 0 0Z' fill='%236c5ce7'/%3E%3C/svg%3E") no-repeat;
 }
 
 .message-text {
@@ -736,22 +797,23 @@ body {
 /* Message Input */
 .message-input-container {
   padding: var(--spacing-md) var(--spacing-lg);
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border-color);
+  background: rgba(20, 20, 30, 0.8) !important;
+  backdrop-filter: blur(25px) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
   position: relative;
-  z-index: 10;
+  z-index: 20;
   flex-shrink: 0;
   margin-top: auto;
 }
 
 .message-input {
   flex: 1;
-  padding: var(--spacing-md);
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
+  padding: 12px 18px;
+  background: rgba(30, 30, 40, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--border-radius-lg);
   color: var(--text-primary);
   font-size: var(--font-size-md);
@@ -759,7 +821,8 @@ body {
   outline: none;
   resize: none;
   max-height: 120px;
-  transition: border-color var(--transition-fast);
+  transition: all 0.3s ease;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .message-input::placeholder {
@@ -768,6 +831,8 @@ body {
 
 .message-input:focus {
   border-color: var(--accent-primary);
+  background: rgba(35, 35, 45, 0.8);
+  box-shadow: 0 0 15px rgba(108, 92, 231, 0.2), inset 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 /* Buttons */
@@ -2040,4 +2105,33 @@ body {
   bottom: 15px;
   float: right;
   z-index: 10;
+}
+
+/* ===== Modal Animations (for Portal-rendered modals) ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Ensure portal modals always render above everything */
+body>div[data-portal] {
+  position: fixed;
+  z-index: 99999;
 }

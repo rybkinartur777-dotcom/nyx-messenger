@@ -6,6 +6,7 @@ import { T } from '../../locales';
 import { Message } from '../../types';
 
 import AudioPlayer from './AudioPlayer';
+import { EncryptionInfoModal } from './EncryptionInfoModal';
 
 const EMOJI_LIST = ['❤️', '👍', '😂', '😮', '😢', '🔥', '💯', '👀'];
 const STICKERS = ['😂', '❤️', '🔥', '👍', '💀', '🤡', '😭', '🥺', '🗿', '☕', '🐱', '🐶', '😎', '🎉', '🧠', '🤬', '💩', '👽', '👾', '🤖', '👑', '🤌'];
@@ -13,10 +14,12 @@ const STICKERS = ['😂', '❤️', '🔥', '👍', '💀', '🤡', '😭', '�
 export const ChatWindow: React.FC = () => {
     const {
         activeChat, user, messages, setMessages, markMessagesAsRead, onlineUsers,
-        pinMessage, unpinMessage, pinnedMessages, lang, deleteMessageLocal, toggleSidebar
+        pinMessage, unpinMessage, pinnedMessages, lang, deleteMessageLocal, toggleSidebar,
+        stealthMode
     } = useStore();
     const [inputValue, setInputValue] = useState('');
     const [showStickers, setShowStickers] = useState(false);
+    const [showEncryptionModal, setShowEncryptionModal] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [isTyping, setIsTyping] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
@@ -57,6 +60,8 @@ export const ChatWindow: React.FC = () => {
 
         const handleTyping = (data: { chatId: string, userId: string }) => {
             if (activeChat && data.chatId === activeChat.id && data.userId !== user?.id) {
+                // If the user hasn't opted into stealth mode, we technically still show typing unless the SENDER is stealth.
+                // But simplified: we just show it. 
                 setIsTyping(true);
                 if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
                 typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 3000);
@@ -105,7 +110,7 @@ export const ChatWindow: React.FC = () => {
 
                     if (formattedMessages.length > 0) {
                         const hasUnreadIncoming = formattedMessages.some((m: any) => m.senderId !== user?.id && m.status !== 'read');
-                        if (hasUnreadIncoming && user) {
+                        if (hasUnreadIncoming && user && !stealthMode) {
                             socketService.getSocket()?.emit('message:read', { chatId: activeChat.id, userId: user.id });
                             markMessagesAsRead(activeChat.id, user.id);
                         }
@@ -129,7 +134,7 @@ export const ChatWindow: React.FC = () => {
 
         if (activeChat && user && chatMessages.length > 0) {
             const hasUnreadIncoming = chatMessages.some(m => m.senderId !== user.id && m.status !== 'read');
-            if (hasUnreadIncoming) {
+            if (hasUnreadIncoming && !stealthMode) {
                 socketService.getSocket()?.emit('message:read', { chatId: activeChat.id, userId: user.id });
                 markMessagesAsRead(activeChat.id, user.id);
             }
@@ -318,7 +323,7 @@ export const ChatWindow: React.FC = () => {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setInputValue(e.target.value);
-        if (activeChat && user) {
+        if (activeChat && user && !stealthMode) {
             socketService.getSocket()?.emit('message:typing', { chatId: activeChat.id, userId: user.id });
         }
     };
@@ -414,27 +419,26 @@ export const ChatWindow: React.FC = () => {
                     </div>
                 </div>
                 <div className="empty-state">
-                    <div style={{ fontSize: '80px', marginBottom: '10px', filter: 'drop-shadow(0 0 20px rgba(255, 170, 0, 0.3))' }}>🔐</div>
-                    <div className="empty-state-title" style={{ fontSize: '2.4rem', fontWeight: '800', marginBottom: '8px' }}>Nyx Messenger</div>
-                    <div className="empty-state-text" style={{ color: 'var(--text-secondary)', marginBottom: '30px', maxWidth: '400px', textAlign: 'center' }}>
-                        Выберите чат слева или создайте новый, чтобы начать защищённое общение.
-                    </div>
+                    <div className="empty-state-card">
+                        <div className="empty-state-title">{T[lang].chat.select_chat}</div>
+                        <div className="empty-state-subtitle">{T[lang].chat.or_create_new}</div>
 
-                    <div className="how-it-works">
-                        <h3>КАК ЭТО РАБОТАЕТ:</h3>
-                        <ol>
-                            <li>Копируешь <b>свой ID</b> в настройках профиля.</li>
-                            <li>Отправляешь другу через любой удобный канал.</li>
-                            <li>Вы общаетесь в полностью зашифрованных чатах.</li>
-                        </ol>
-                    </div>
+                        <div className="how-it-works-card">
+                            <h3>{T[lang].chat.how_it_works}</h3>
+                            <ol>
+                                <li>{T[lang].chat.step_1}</li>
+                                <li>{T[lang].chat.step_2}</li>
+                                <li>{T[lang].chat.step_3}</li>
+                            </ol>
+                        </div>
 
-                    <button className="start-chat-btn" onClick={() => (document.querySelector('.create-chat-btn-large') as HTMLButtonElement)?.click()}>
-                        🔥 Начать чат
-                    </button>
+                        <button className="start-chat-btn" onClick={() => (document.querySelector('.create-chat-btn-large') as HTMLButtonElement)?.click()}>
+                            {T[lang].chat.start_chat}
+                        </button>
 
-                    <div className="encryption-badge" style={{ marginTop: '30px', opacity: 0.6, fontSize: '12px', border: '1px solid var(--border-color)', padding: '4px 12px', borderRadius: '20px' }}>
-                        СКВОЗНОЕ ШИФРОВАНИЕ
+                        <div className="e2e-badge">
+                            🔐 {T[lang].chat.e2e_badge}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -475,7 +479,13 @@ export const ChatWindow: React.FC = () => {
                         >
                             🔍
                         </button>
-                        <div className="encryption-badge">🔐 E2E</div>
+                        <div
+                            className="encryption-badge"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => setShowEncryptionModal(true)}
+                        >
+                            🔐 E2E
+                        </div>
                     </div>
                 </div>
 
@@ -738,7 +748,7 @@ export const ChatWindow: React.FC = () => {
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                             </svg>
-                            {T[lang].pin}
+                            {T[lang].chat.pin}
                         </button>
                         <button className="context-menu-item danger" onClick={() => { socketService.deleteMessage(activeChat.id, contextMenu.message.id, user!.id); setContextMenu(null); }}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -796,7 +806,7 @@ export const ChatWindow: React.FC = () => {
 
                         <button
                             className={`btn btn-ghost sd-toggle ${isSelfDestruct ? 'active' : ''}`}
-                            title={T[lang].selfDestruct}
+                            title={T[lang].chat.self_destruct}
                             onClick={() => setIsSelfDestruct(!isSelfDestruct)}
                             style={{ display: isRecording ? 'none' : 'inline-flex', color: isSelfDestruct ? '#ff4b2b' : 'inherit' }}
                         >
@@ -825,6 +835,7 @@ export const ChatWindow: React.FC = () => {
                         </button>
                     </div>
                 </div>
+                <EncryptionInfoModal isOpen={showEncryptionModal} onClose={() => setShowEncryptionModal(false)} />
             </div>
 
             {/* Fixed emoji picker */}

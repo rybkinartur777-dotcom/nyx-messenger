@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { socketService } from '../../socket/socketService';
 import { Chat } from '../../types';
+import { SettingsModal } from './SettingsModal';
 
 interface SidebarProps {
     onAddContact: () => void;
@@ -11,6 +12,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
     const { user, chats, activeChat, setActiveChat, sidebarOpen, toggleSidebar, logout, onlineUsers } = useStore();
     const [chatSearch, setChatSearch] = useState('');
     const [confirmLogout, setConfirmLogout] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
     const [idCopied, setIdCopied] = useState(false);
     const [chatContextMenu, setChatContextMenu] = useState<{ x: number, y: number, chat: Chat } | null>(null);
 
@@ -228,7 +230,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                         <div className="profile-actions">
                             <button
                                 className="profile-action-btn"
-                                onClick={() => alert('Настройки в разработке')}
+                                onClick={() => setShowSettings(true)}
                                 title="Настройки"
                             >
                                 ⚙️ Настройки
@@ -243,6 +245,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                     )}
                 </div>
             )}
+
+            <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
         </div>
     );
 };

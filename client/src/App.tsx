@@ -133,7 +133,7 @@ const App: React.FC = () => {
                     onClick={() => setIsNinjaMode(false)}
                 >
                     <div className="ninja-lock-content">
-                        🔒 {T[lang].ninjaLockedText}
+                        🔒 {T[lang].chat.ninja_locked}
                     </div>
                 </div>
             )}
