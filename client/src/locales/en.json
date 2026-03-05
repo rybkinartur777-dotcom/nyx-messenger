@@ -1,0 +1,38 @@
+{
+    "chat": {
+        "search": "Search chats...",
+        "type_message": "Type a message...",
+        "start_chat": "Start chat",
+        "select_chat": "Select a chat on the left",
+        "or_create_new": "Or create a new one",
+        "how_it_works": "How it works",
+        "step_1": "Create a chat",
+        "step_2": "Share your ID",
+        "step_3": "Start secure messaging",
+        "e2e_badge": "End-to-End Encryption",
+        "pin": "Pin",
+        "unpin": "Unpin",
+        "pinned_messages": "Pinned Messages",
+        "reply": "Reply",
+        "copy": "Copy",
+        "delete": "Delete",
+        "searching": "Searching...",
+        "contacts": "Contacts",
+        "chats": "Chats",
+        "settings": "Settings",
+        "logout": "Logout",
+        "theme": "Theme",
+        "language": "Language",
+        "no_pinned": "No pinned messages",
+        "deleted": "Message deleted",
+        "burn_after_reading": "Message will vanish after being read",
+        "self_destruct": "Self-destruct",
+        "ninja_mode": "Ninja Mode",
+        "ninja_locked": "Nyx is locked. Press any key to unlock."
+    },
+    "status": {
+        "online": "Online",
+        "offline": "Offline",
+        "typing": "Typing..."
+    }
+}

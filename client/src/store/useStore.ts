@@ -18,6 +18,8 @@ interface AppState {
     // UI
     isLoading: boolean;
     sidebarOpen: boolean;
+    lang: 'ru' | 'en';
+    stealthMode: boolean;
 
     // Actions
     setUser: (user: User | null) => void;
@@ -31,6 +33,8 @@ interface AppState {
     setLoading: (loading: boolean) => void;
     toggleSidebar: () => void;
     updateChatLastMessage: (chatId: string, message: Message) => void;
+    setLanguage: (lang: 'ru' | 'en') => void;
+    toggleStealthMode: () => void;
 }
 
 export const useStore = create<AppState>()(
@@ -45,6 +49,8 @@ export const useStore = create<AppState>()(
             contacts: [],
             isLoading: false,
             sidebarOpen: true,
+            lang: 'ru',
+            stealthMode: false,
 
             // Actions
             setUser: (user) => set({
@@ -100,6 +106,9 @@ export const useStore = create<AppState>()(
                         : chat
                 )
             })),
+
+            setLanguage: (lang) => set({ lang }),
+            toggleStealthMode: () => set((state) => ({ stealthMode: !state.stealthMode })),
         }),
         {
             name: 'nyx-storage',
@@ -107,6 +116,8 @@ export const useStore = create<AppState>()(
                 user: state.user,
                 isAuthenticated: state.isAuthenticated,
                 contacts: state.contacts,
+                lang: state.lang,
+                stealthMode: state.stealthMode,
             }),
         }
     )

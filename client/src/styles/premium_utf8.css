@@ -1,0 +1,138 @@
+﻿/* Nyx Premium Styles */
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: rgba(18, 18, 26, 0.7);
+  --bg-tertiary: rgba(26, 26, 37, 0.5);
+  --bg-hover: rgba(108, 92, 231, 0.15);
+  --bg-active: rgba(108, 92, 231, 0.25);
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0b0;
+  --text-muted: #606070;
+  --accent-primary: #6c5ce7;
+  --accent-secondary: #a29bfe;
+  --accent-glow: rgba(108, 92, 231, 0.5);
+  --primary: #6c5ce7;
+  --primary-glow: rgba(108, 92, 231, 0.6);
+  --success: #00f3a0;
+  --warning: #ffd32a;
+  --danger: #ff4757;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-radius: 16px;
+  --border-radius-sm: 10px;
+  --border-radius-lg: 24px;
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.7);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(20, 20, 30, 0.6);
+  --font-family: 'Inter', 'Outfit', sans-serif;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+}
+
+@keyframes move-twink-back {
+  from { background-position: 0 0; }
+  to { background-position: -10000px 5000px; }
+}
+
+.stars-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000 url('https://i.imgur.com/uCclv8A.png') repeat top center;
+  z-index: -2;
+}
+
+.twinkling {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent url('https://i.imgur.com/Y7p7vH0.png') repeat top center;
+  z-index: -1;
+  animation: move-twink-back 200s linear infinite;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-family); background: var(--bg-primary); color: var(--text-primary); overflow: hidden; }
+.app { display: flex; height: 100vh; width: 100vw; background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%); position: relative; }
+
+.sidebar {
+  width: 320px;
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(20px) !important;
+  border-right: var(--glass-border) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  z-index: 10;
+}
+
+.logo-text {
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #fff 0%, #a29bfe 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.new-chat-btn-top {
+  background: var(--primary);
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 0 15px var(--primary-glow);
+  transition: all 0.2s;
+  border: none;
+}
+
+.empty-chat-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+}
+
+.how-it-works {
+  background: rgba(20, 20, 30, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 30px;
+  max-width: 450px;
+  backdrop-filter: blur(10px);
+  margin: 0 auto 30px;
+  text-align: left;
+}
+
+.how-it-works h3 { color: var(--accent-secondary); margin-bottom: 20px; text-transform: uppercase; }
+.how-it-works ol { list-style: none; counter-reset: li; }
+.how-it-works li { margin-bottom: 15px; display: flex; gap: 15px; color: var(--text-secondary); }
+.how-it-works li::before { content: counter(li) '.'; counter-increment: li; color: var(--accent-primary); font-weight: 800; }
+
+.start-chat-btn {
+  background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%) !important;
+  color: white !important;
+  padding: 14px 32px !important;
+  border-radius: 14px !important;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(108, 92, 231, 0.4);
+}
+
+.main-chat { flex: 1; display: flex; flex-direction: column; position: relative; z-index: 1; }
+.empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+
+/* Rest of normal styles from original - truncated for safety */
+

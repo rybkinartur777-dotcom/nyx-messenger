@@ -11,6 +11,7 @@ const App: React.FC = () => {
     const { isAuthenticated, user } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [showAddContact, setShowAddContact] = useState(false);
+    const [isNinjaMode, setIsNinjaMode] = useState(false);
 
     useEffect(() => {
         const initApp = async () => {
@@ -37,6 +38,40 @@ const App: React.FC = () => {
         initApp();
     }, [user]);
 
+    // Ninja Mode logic
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (isNinjaMode) {
+                setIsNinjaMode(false);
+                return;
+            }
+            // Ctrl + Shift + H for Ninja Mode
+            if (e.ctrlKey && e.shiftKey && (e.key === 'H' || e.key === 'h' || e.key === 'р' || e.key === 'Р')) {
+                setIsNinjaMode(true);
+            }
+        };
+
+        const idleTimer = setTimeout(() => {
+            if (isAuthenticated && !isNinjaMode) {
+                setIsNinjaMode(true);
+            }
+        }, 5 * 60 * 1000); // 5 minutes idle
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('mousemove', () => clearTimeout(idleTimer));
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            clearTimeout(idleTimer);
+        };
+    }, [isNinjaMode, isAuthenticated]);
+
+    useEffect(() => {
+        const handleOpenAddContact = () => setShowAddContact(true);
+        document.addEventListener('openAddContact', handleOpenAddContact);
+        return () => document.removeEventListener('openAddContact', handleOpenAddContact);
+    }, []);
+
     if (isLoading) {
         return (
             <div className="auth-container">
@@ -54,12 +89,30 @@ const App: React.FC = () => {
 
     return (
         <div className="app">
+            <div className="stars-container"></div>
+            <div className="twinkling"></div>
             <Sidebar onAddContact={() => setShowAddContact(true)} />
             <ChatWindow />
             <AddContactModal
                 isOpen={showAddContact}
                 onClose={() => setShowAddContact(false)}
             />
+
+            {isNinjaMode && (
+                <div
+                    style={{
+                        position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+                        background: 'rgba(10, 10, 15, 0.95)', backdropFilter: 'blur(40px)',
+                        zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#4e54c8', fontSize: '1.5rem', fontWeight: 'bold', cursor: 'pointer'
+                    }}
+                    onClick={() => setIsNinjaMode(false)}
+                >
+                    <div className="ninja-lock-content">
+                        🔒 Приложение заблокировано
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

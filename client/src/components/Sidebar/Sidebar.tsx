@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { Chat } from '../../types';
+import { SettingsModal } from './SettingsModal';
 
 interface SidebarProps {
     onAddContact: () => void;
@@ -8,6 +9,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
     const { user, chats, activeChat, setActiveChat } = useStore();
+    const [showSettings, setShowSettings] = useState(false);
 
     const formatTime = (date: Date) => {
         const now = new Date();
@@ -92,17 +94,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                         <div className="profile-name">{user.nickname}</div>
                         <div className="profile-id">{user.id}</div>
                     </div>
-                    <button
-                        className="btn btn-ghost"
-                        onClick={() => {
-                            navigator.clipboard.writeText(user.id);
-                        }}
-                        title="Скопировать ID"
-                    >
-                        📋
-                    </button>
+                    <div className="profile-actions" style={{ display: 'flex' }}>
+                        <button
+                            className="btn btn-ghost"
+                            onClick={() => setShowSettings(true)}
+                            title="Настройки"
+                        >
+                            ⚙️
+                        </button>
+                        <button
+                            className="btn btn-ghost"
+                            onClick={() => {
+                                navigator.clipboard.writeText(user.id);
+                            }}
+                            title="Скопировать ID"
+                        >
+                            📋
+                        </button>
+                    </div>
                 </div>
             )}
+
+            <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
         </div>
     );
 };

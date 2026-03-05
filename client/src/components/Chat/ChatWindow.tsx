@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import { socketService } from '../../socket/socketService';
+import { EncryptionInfoModal } from './EncryptionInfoModal';
 
 export const ChatWindow: React.FC = () => {
     const { user, activeChat, messages } = useStore();
     const [inputValue, setInputValue] = useState('');
+    const [showEncryptionModal, setShowEncryptionModal] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const chatMessages = activeChat ? messages[activeChat.id] || [] : [];
@@ -40,13 +42,28 @@ export const ChatWindow: React.FC = () => {
         return (
             <div className="main-chat">
                 <div className="empty-state">
-                    <div className="empty-state-icon">🔒</div>
+                    <div className="empty-state-icon">🔐</div>
                     <div className="empty-state-title">Nyx Messenger</div>
-                    <div className="empty-state-text">
-                        Выберите чат или добавьте контакт по ID, чтобы начать защищённое общение
+                    <div className="empty-state-text" style={{ marginBottom: "30px", color: "var(--text-secondary)" }}>
+                        Выберите чат слева или создайте новый, чтобы начать<br />
+                        защищённое общение.
                     </div>
-                    <div className="encryption-badge" style={{ marginTop: '16px' }}>
-                        🔐 Сквозное шифрование
+
+                    <div className="how-it-works">
+                        <h3>КАК ЭТО РАБОТАЕТ:</h3>
+                        <ol>
+                            <li><strong>Копируешь свой ID</strong> в настройках профиля.</li>
+                            <li><strong>Отправляешь другу</strong> через другой канал.</li>
+                            <li><strong>Вы общаетесь</strong> в полностью зашифрованных<br />чатах.</li>
+                        </ol>
+                    </div>
+
+                    <button className="start-chat-btn" onClick={() => document.dispatchEvent(new CustomEvent('openAddContact'))}>
+                        🔥 Начать чат
+                    </button>
+
+                    <div className="encryption-badge" style={{ marginTop: '30px', background: 'transparent', letterSpacing: '1px', textTransform: 'uppercase', fontSize: '12px' }}>
+                        END-TO-END ENCRYPTION
                     </div>
                 </div>
             </div>
@@ -65,7 +82,9 @@ export const ChatWindow: React.FC = () => {
                         в сети
                     </div>
                 </div>
-                <div className="encryption-badge">
+                <div className="encryption-badge"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setShowEncryptionModal(true)}>
                     🔐 E2E
                 </div>
             </div>
@@ -125,6 +144,8 @@ export const ChatWindow: React.FC = () => {
                     ➤
                 </button>
             </div>
+
+            <EncryptionInfoModal isOpen={showEncryptionModal} onClose={() => setShowEncryptionModal(false)} />
         </div>
     );
 };
