@@ -1,18 +1,17 @@
 import { Router, Request, Response } from 'express';
-import { getDb } from '../models/database.js';
+import { get, run, query } from '../models/database.js';
 
 const router = Router();
 
 // Get user by ID
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const db = getDb();
 
-        const user = db.prepare(`
+        const user = await get(`
       SELECT id, nickname, public_key, avatar, allow_search_by_nickname, created_at
       FROM users WHERE id = ?
-    `).get(id) as any;
+    `, [id]) as any;
 
         if (!user) {
             return res.status(404).json({
@@ -42,25 +41,24 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 // Search users by nickname (if allowed)
-router.get('/search/:query', (req: Request, res: Response) => {
+router.get('/search/:query', async (req: Request, res: Response) => {
     try {
-        const { query } = req.params;
-        const db = getDb();
+        const { query: searchQuery } = req.params;
 
-        if (query.length < 3) {
+        if (searchQuery.length < 3) {
             return res.status(400).json({
                 success: false,
                 error: 'Query must be at least 3 characters'
             });
         }
 
-        const users = db.prepare(`
+        const users = await query(`
       SELECT id, nickname, avatar
       FROM users 
       WHERE allow_search_by_nickname = 1 
         AND nickname LIKE ?
       LIMIT 20
-    `).all(`%${query}%`) as any[];
+    `, [`%${searchQuery}%`]) as any[];
 
         res.json({
             success: true,
@@ -80,20 +78,20 @@ router.get('/search/:query', (req: Request, res: Response) => {
 });
 
 // Update user profile
-router.patch('/:id', (req: Request, res: Response) => {
+router.patch('/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { nickname, avatar, allowSearchByNickname, autoDeleteMessages } = req.body;
-        const db = getDb();
 
         const updates: string[] = [];
         const values: any[] = [];
 
         if (nickname !== undefined) {
             // Check nickname uniqueness
-            const existing = db.prepare(
-                'SELECT id FROM users WHERE nickname = ? AND id != ?'
-            ).get(nickname, id);
+            const existing = await get(
+                'SELECT id FROM users WHERE nickname = ? AND id != ?',
+                [nickname, id]
+            );
 
             if (existing) {
                 return res.status(409).json({
@@ -130,11 +128,11 @@ router.patch('/:id', (req: Request, res: Response) => {
 
         values.push(id);
 
-        db.prepare(`
+        await run(`
       UPDATE users SET ${updates.join(', ')} WHERE id = ?
-    `).run(...values);
+    `, values);
 
-        const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as any;
+        const user = await get('SELECT * FROM users WHERE id = ?', [id]) as any;
 
         res.json({
             success: true,
