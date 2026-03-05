@@ -6,17 +6,27 @@ import { Sidebar } from './components/Sidebar/Sidebar';
 import { ChatWindow } from './components/Chat/ChatWindow';
 import { AddContactModal } from './components/Contacts/AddContactModal';
 import { socketService } from './socket/socketService';
+import { API_BASE_URL } from './config';
+import { T } from './locales';
+import { StarField } from './components/StarField';
 
 const App: React.FC = () => {
-    const { isAuthenticated, user } = useStore();
+    const { isAuthenticated, user, setChats, theme, lang } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [showAddContact, setShowAddContact] = useState(false);
     const [isNinjaMode, setIsNinjaMode] = useState(false);
 
     useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme || 'dark');
+    }, [theme]);
+
+    useEffect(() => {
         const initApp = async () => {
             try {
                 await cryptoService.init();
+
+                // Request push notification permission
+                socketService.requestNotificationPermission();
 
                 // Check for stored keys
                 const privateKey = localStorage.getItem('nyx_private_key');
@@ -36,7 +46,7 @@ const App: React.FC = () => {
         };
 
         initApp();
-    }, [user]);
+    }, [user, setChats]);
 
     // Ninja Mode logic
     useEffect(() => {
@@ -67,10 +77,24 @@ const App: React.FC = () => {
     }, [isNinjaMode, isAuthenticated]);
 
     useEffect(() => {
-        const handleOpenAddContact = () => setShowAddContact(true);
-        document.addEventListener('openAddContact', handleOpenAddContact);
-        return () => document.removeEventListener('openAddContact', handleOpenAddContact);
-    }, []);
+        if (!isAuthenticated || !user?.id) return;
+
+        const fetchChats = async () => {
+            try {
+                const serverUrl = API_BASE_URL.replace(/\/$/, '');
+                const response = await fetch(`${serverUrl}/api/chats/user/${user.id}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    setChats(result.data);
+                }
+            } catch (err) {
+                console.error('Failed to fetch chats:', err);
+            }
+        };
+
+        fetchChats();
+    }, [isAuthenticated, user?.id, setChats]);
 
     if (isLoading) {
         return (
@@ -89,8 +113,8 @@ const App: React.FC = () => {
 
     return (
         <div className="app">
-            <div className="stars-container"></div>
-            <div className="twinkling"></div>
+            <StarField />
+
             <Sidebar onAddContact={() => setShowAddContact(true)} />
             <ChatWindow />
             <AddContactModal
@@ -109,7 +133,7 @@ const App: React.FC = () => {
                     onClick={() => setIsNinjaMode(false)}
                 >
                     <div className="ninja-lock-content">
-                        🔒 Приложение заблокировано
+                        🔒 {T[lang].chat.ninja_locked}
                     </div>
                 </div>
             )}
