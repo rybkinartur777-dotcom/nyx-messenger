@@ -11,6 +11,7 @@ class SocketService {
         if (this.socket) return;
 
         this.socket = io(this.serverUrl, {
+            transports: ['websocket'],
             reconnection: true,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
@@ -45,7 +46,7 @@ class SocketService {
                 chatId: data.chatId,
                 senderId: data.senderId,
                 content: data.encryptedContent,
-                type: data.type || 'text',
+                type: data.message_type || data.type || 'text',
                 fileUrl: data.file_url,
                 timestamp: new Date(data.timestamp),
                 status: 'delivered',
