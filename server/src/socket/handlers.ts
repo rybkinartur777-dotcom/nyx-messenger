@@ -105,16 +105,17 @@ export function setupSocketHandlers(io: Server) {
                     timestamp: new Date().toISOString()
                 };
 
-                // Deliver to all participants
+                // Deliver to all participants via user rooms
                 const participants = await query('SELECT user_id FROM chat_participants WHERE chat_id = ?', [chatId]) as { user_id: string }[];
 
                 if (participants && participants.length > 0) {
                     participants.forEach(p => {
                         io.to(`user:${p.user_id}`).emit('message:new', messageData);
                     });
-                } else {
-                    io.to(`chat:${chatId}`).emit('message:new', messageData);
                 }
+
+                // Also broadcast to the active chat room to catch anyone currently viewing it
+                socket.to(`chat:${chatId}`).emit('message:new', messageData);
             } catch (err) {
                 console.error('Error saving message:', err);
             }
