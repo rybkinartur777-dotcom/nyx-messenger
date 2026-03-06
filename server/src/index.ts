@@ -8,6 +8,11 @@ import { setupSocketHandlers } from './socket/handlers.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import chatRoutes from './routes/chats.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
@@ -34,15 +39,19 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', service: 'nyx-server' });
 });
 
-// Basic route to confirm server is alive
-app.get('/', (req, res) => {
-    res.send('🌙 NYX Secure Messenger Server is running');
-});
-
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/chats', chatRoutes);
+
+// Serve static files from the client app
+const clientBuildPath = path.join(__dirname, '../../client/dist');
+app.use(express.static(clientBuildPath));
+
+// Catch-all route to serve the React app (must be after API routes)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
+});
 
 // Socket.io handlers
 setupSocketHandlers(io);
