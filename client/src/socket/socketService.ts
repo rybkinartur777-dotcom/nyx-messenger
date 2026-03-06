@@ -168,6 +168,7 @@ class SocketService {
             chatId,
             senderId,
             type: type,
+            message_type: type,
             encryptedContent: content,
             file_url: fileUrl,
             nonce: 'dummy_nonce',

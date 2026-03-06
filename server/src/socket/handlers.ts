@@ -56,27 +56,20 @@ export function setupSocketHandlers(io: Server) {
         });
 
         // New message
-        socket.on('message:send', async (data: {
-            id?: string;
-            chatId: string;
-            senderId: string;
-            message_type?: string;
-            encryptedContent: string;
-            file_url?: string;
-            nonce: string;
-            replyTo?: string;
-            selfDestruct?: boolean;
-        }) => {
-            const { chatId, senderId, message_type, encryptedContent, file_url, nonce, replyTo, selfDestruct } = data;
+        socket.on('message:send', async (data: any) => {
+            console.log('📨 MESSAGE RECEIVED ON SERVER:', data);
+
+            const { chatId, senderId, message_type, type, encryptedContent, file_url, nonce, replyTo, selfDestruct } = data;
 
             const messageId = data.id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const finalType = message_type || type || 'text';
 
             try {
                 // Save to database
                 await run(`
                     INSERT INTO messages (id, chat_id, sender_id, message_type, encrypted_content, file_url, nonce, reply_to, self_destruct)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                `, [messageId, chatId, senderId, message_type || 'text', encryptedContent, file_url || null, nonce, replyTo || null, selfDestruct ? 1 : 0]);
+                `, [messageId, chatId, senderId, finalType, encryptedContent, file_url || null, nonce || 'dummy_nonce', replyTo || null, selfDestruct ? 1 : 0]);
 
                 // Ensure sender is in participants
                 try {
@@ -96,7 +89,8 @@ export function setupSocketHandlers(io: Server) {
                     chatId,
                     senderId,
                     senderName: sender?.nickname || 'Unknown',
-                    message_type: message_type || 'text',
+                    message_type: finalType,
+                    type: finalType,
                     encryptedContent,
                     file_url,
                     nonce,
