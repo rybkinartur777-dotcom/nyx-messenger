@@ -3,10 +3,10 @@
     position: relative;
     width: 100vw;
     height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
+    height: 100dvh;
+    display: block;
+    overflow-y: auto !important;
+    overflow-x: hidden;
     background-color: var(--bg-primary, #050510);
 }
 
@@ -15,7 +15,9 @@
     z-index: 10;
     width: 100%;
     max-width: 480px;
-    padding: 20px;
+    margin: 0 auto;
+    min-height: 100%;
+    padding: 40px 20px;
     display: flex;
     justify-content: center;
     align-items: center;
