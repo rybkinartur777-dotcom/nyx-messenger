@@ -110,6 +110,14 @@ export async function initDatabase(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_reactions_message ON message_reactions(message_id);
     `);
 
+    // Run migrations for existing DB
+    try {
+      await pgPool.query('ALTER TABLE messages ADD COLUMN IF NOT EXISTS self_destruct INTEGER DEFAULT 0');
+    } catch (err) { /* Ignore error if column already exists or unsupported */ }
+    try {
+      await pgPool.query('ALTER TABLE messages ADD COLUMN IF NOT EXISTS reply_to VARCHAR(255)');
+    } catch (err) { /* Ignore error */ }
+
     console.log('✓ PostgreSQL database initialized');
   } else {
     console.log('📦 Initializing SQLite database...');
@@ -210,6 +218,14 @@ export async function initDatabase(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_users_nickname ON users(nickname);
       CREATE INDEX IF NOT EXISTS idx_reactions_message ON message_reactions(message_id);
     `);
+
+    // Run migrations for existing DB
+    try {
+      await sqliteDb.exec('ALTER TABLE messages ADD COLUMN self_destruct INTEGER DEFAULT 0');
+    } catch (err) { /* Ignore error if column already exists */ }
+    try {
+      await sqliteDb.exec('ALTER TABLE messages ADD COLUMN reply_to TEXT');
+    } catch (err) { /* Ignore error */ }
 
     console.log('✓ SQLite database initialized');
   }
