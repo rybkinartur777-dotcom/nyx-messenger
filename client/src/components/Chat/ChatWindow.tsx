@@ -461,7 +461,13 @@ export const ChatWindow: React.FC = () => {
         return (
             <div className="main-chat">
                 <div className="chat-header mobile-only">
-                    <button className="btn btn-ghost" onClick={toggleSidebar}>☰</button>
+                    <button className="btn btn-ghost" onClick={toggleSidebar} style={{ padding: '8px', display: 'flex' }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-secondary)' }}>
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ width: '24px', height: '24px', overflow: 'hidden', borderRadius: '4px', flexShrink: 0 }}>
                             <img src="/logo.png" className="logo-icon" alt="Nyx Logo" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scale(1.4)', clipPath: 'inset(15% round 10px)' }} />
@@ -566,7 +572,13 @@ export const ChatWindow: React.FC = () => {
                             <polyline points="15 18 9 12 15 6" />
                         </svg>
                     </button>
-                    <button className="btn btn-ghost mobile-only" onClick={toggleSidebar} style={{ display: 'none' }}>☰</button>
+                    <button className="btn btn-ghost mobile-only" onClick={toggleSidebar} style={{ padding: '8px' }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-secondary)' }}>
+                            <line x1="3" y1="12" x2="21" y2="12"></line>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <line x1="3" y1="18" x2="21" y2="18"></line>
+                        </svg>
+                    </button>
                     <div className="avatar" style={{ width: '44px', height: '44px', overflow: 'hidden', padding: activeChat.avatar ? 0 : undefined }}>
                         {activeChat.avatar ? (
                             <img src={activeChat.avatar} alt={activeChat.name || 'Chat'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

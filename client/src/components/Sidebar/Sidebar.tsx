@@ -70,7 +70,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
     return (
         <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
             <div className="sidebar-header">
-                <button className="btn btn-ghost mobile-only" onClick={toggleSidebar}>✕</button>
+                <button className="btn btn-ghost mobile-only" onClick={toggleSidebar} style={{ padding: '8px', display: 'flex' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-secondary)' }}>
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
                 <div className="logo" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                     <div style={{ width: '34px', height: '34px', overflow: 'hidden', borderRadius: '8px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <img src="/logo.png" className="logo-icon" alt="Nyx Logo" style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scale(1.45)', clipPath: 'inset(14% round 12px)' }} />

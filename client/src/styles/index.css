@@ -2378,6 +2378,12 @@ select {
     display: none;
 }
 
+@media (max-width: 768px) {
+    .mobile-only {
+        display: flex !important;
+    }
+}
+
 /* Chat header info area (used by ChatWindow header) */
 .chat-header-info {
     flex: 1;
