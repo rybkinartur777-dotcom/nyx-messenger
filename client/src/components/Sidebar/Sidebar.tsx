@@ -82,11 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                     </div>
                     <span className="logo-text" style={{ display: 'flex', alignItems: 'center', lineHeight: 1 }}>NYX</span>
                 </div>
-<<<<<<< HEAD
-                <button className="new-chat-btn-top" onClick={onAddContact} title="Создать новый чат" style={{ width: '34px', height: '34px', flexShrink: 0 }}>
-=======
                 <button className="new-chat-btn-top add-contact-btn" onClick={onAddContact} title="Создать новый чат" style={{ width: '34px', height: '34px', flexShrink: 0 }}>
->>>>>>> 7d31703 (UI refinement: polished settings modal, fixed tab alignment, and updated profile ID view)
                     +
                 </button>
             </div>

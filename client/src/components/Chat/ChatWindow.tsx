@@ -631,32 +631,19 @@ export const ChatWindow: React.FC = () => {
 
                         <div className="pinned-carousel">
                             {pinnedMessages[activeChat.id].map((m, idx) => {
-<<<<<<< HEAD
-                                const senderName = m.senderId === user?.id ? 'Вы' : (activeChat.name || 'Контакт');
-                                const preview = m.type === 'image' ? '📷 Фото'
-                                    : m.type === 'audio' ? '🎤 Голосовое'
-                                        : m.type === 'video' ? '🎬 Видео'
-                                            : m.type === 'file' ? '📎 Файл'
-                                                : m.type === 'sticker' ? '✨ Стикер'
-=======
                                 const senderName = m.senderId === user?.id ? T[lang].chat.you : (activeChat.name || T[lang].sidebar.unknown);
                                 const preview = m.type === 'image' ? T[lang].chat.msg_image
                                     : m.type === 'audio' ? T[lang].chat.msg_audio
                                         : m.type === 'video' ? T[lang].chat.msg_video
                                             : m.type === 'file' ? T[lang].chat.msg_file
                                                 : m.type === 'sticker' ? T[lang].chat.msg_sticker
->>>>>>> 7d31703 (UI refinement: polished settings modal, fixed tab alignment, and updated profile ID view)
                                                     : m.content.slice(0, 60) + (m.content.length > 60 ? '…' : '');
                                 return (
                                     <div key={m.id} className="pinned-item-mini" onClick={() => {
                                         const el = document.getElementById(`msg-${m.id}`);
                                         el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                     }}>
-<<<<<<< HEAD
-                                        <div className="pinned-label">Закреплено {idx > 0 ? `#${idx + 1}` : ''}</div>
-=======
                                         <div className="pinned-label">{T[lang].chat.pinned} {idx > 0 ? `#${idx + 1}` : ''}</div>
->>>>>>> 7d31703 (UI refinement: polished settings modal, fixed tab alignment, and updated profile ID view)
                                         <div className="pinned-sender">{senderName}</div>
                                         <div className="pinned-content">{preview}</div>
                                     </div>
@@ -1067,11 +1054,7 @@ export const ChatWindow: React.FC = () => {
                         {/* Message textarea */}
                         <textarea
                             className="message-input"
-<<<<<<< HEAD
-                            placeholder={isSelfDestruct ? '🔥 Одноразовое сообщение...' : replyTo ? `Ответить ${replyTo.senderId === user?.id ? 'себе' : activeChat.name}...` : 'Введите сообщение...'}
-=======
                             placeholder={isSelfDestruct ? `🔥 ${T[lang].chat.self_destruct}...` : replyTo ? `${T[lang].chat.reply} ${replyTo.senderId === user?.id ? T[lang].chat.you : activeChat.name}...` : T[lang].chat.type_message}
->>>>>>> 7d31703 (UI refinement: polished settings modal, fixed tab alignment, and updated profile ID view)
                             value={inputValue}
                             onChange={handleInputChange}
                             onKeyPress={handleKeyPress}
