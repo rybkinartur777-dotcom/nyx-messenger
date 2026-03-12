@@ -9,9 +9,11 @@ import { socketService } from './socket/socketService';
 import { API_BASE_URL } from './config';
 import { T } from './locales';
 import { StarField } from './components/StarField';
+import { ToastContainer } from './components/ToastContainer';
+import { setupWebPush } from './socket/pushService';
 
 const App: React.FC = () => {
-    const { isAuthenticated, user, setChats, theme, lang } = useStore();
+    const { isAuthenticated, user, setChats, chats, theme, lang } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [showAddContact, setShowAddContact] = useState(false);
     const [isNinjaMode, setIsNinjaMode] = useState(false);
@@ -37,6 +39,8 @@ const App: React.FC = () => {
 
                 if (user?.id) {
                     socketService.connect(user.id);
+                    // Initialize background Web Push notifications
+                    setupWebPush(user.id);
                 }
             } catch (err) {
                 console.error('Failed to initialize crypto:', err);
@@ -96,6 +100,18 @@ const App: React.FC = () => {
         fetchChats();
     }, [isAuthenticated, user?.id, setChats]);
 
+    // App Badge API
+    useEffect(() => {
+        if ('setAppBadge' in navigator && isAuthenticated) {
+            const totalUnread = chats.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0);
+            if (totalUnread > 0) {
+                navigator.setAppBadge(totalUnread).catch(e => console.error('Failed to set app badge', e));
+            } else {
+                navigator.clearAppBadge().catch(e => console.error('Failed to clear app badge', e));
+            }
+        }
+    }, [chats, isAuthenticated]);
+
     if (isLoading) {
         return (
             <div className="auth-container">
@@ -137,6 +153,8 @@ const App: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            <ToastContainer />
         </div>
     );
 };

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { User, Chat, Message, Contact } from '../types';
+import { User, Chat, Message, Contact, ToastData } from '../types';
 
 interface AppState {
     // Auth
@@ -22,10 +22,11 @@ interface AppState {
     isLoading: boolean;
     sidebarOpen: boolean;
     theme: 'dark' | 'light' | 'cyberpunk';
-    lang: 'ru' | 'en';
+    lang: 'ru' | 'en' | 'uk';
     stealthMode: boolean; // Hide online status and read receipts
     deletedMessageIds: Set<string>;
     pinnedMessages: Record<string, Message[]>; // chatId -> pinned messages
+    toasts: ToastData[]; // In-app notifications
 
     // Actions
     setUser: (user: User | null) => void;
@@ -52,8 +53,10 @@ interface AppState {
     unpinMessage: (chatId: string, messageId: string) => void;
     deleteMessageLocal: (messageId: string) => void;
     editMessage: (chatId: string, messageId: string, newContent: string) => void;
-    setLanguage: (lang: 'ru' | 'en') => void;
+    setLanguage: (lang: 'ru' | 'en' | 'uk') => void;
     toggleStealthMode: () => void;
+    addToast: (toast: Omit<ToastData, 'id'>) => void;
+    removeToast: (id: string) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -74,6 +77,7 @@ export const useStore = create<AppState>()(
             stealthMode: false,
             deletedMessageIds: new Set(),
             pinnedMessages: {},
+            toasts: [],
 
             // Actions
             setUser: (user) => set({
@@ -279,6 +283,17 @@ export const useStore = create<AppState>()(
 
             setLanguage: (lang) => set({ lang }),
             toggleStealthMode: () => set((state) => ({ stealthMode: !state.stealthMode })),
+            addToast: (toast) => {
+                const id = `toast_${Date.now()}_${Math.random()}`;
+                set((state) => ({ toasts: [...state.toasts, { ...toast, id }] }));
+                // Auto remove after 5s
+                setTimeout(() => {
+                    set((state) => ({ toasts: state.toasts.filter(t => t.id !== id) }));
+                }, 5000);
+            },
+            removeToast: (id) => set((state) => ({
+                toasts: state.toasts.filter(t => t.id !== id)
+            })),
         }),
         {
             name: 'nyx-storage',

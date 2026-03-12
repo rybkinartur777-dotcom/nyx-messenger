@@ -515,7 +515,7 @@ export const ChatWindow: React.FC = () => {
                             </ol>
                         </div>
 
-                        <button className="start-chat-btn" onClick={() => (document.querySelector('.create-chat-btn-large') as HTMLButtonElement)?.click()}>
+                        <button className="start-chat-btn" onClick={() => (document.querySelector('.add-contact-btn') as HTMLButtonElement)?.click()}>
                             {T[lang].chat.start_chat}
                         </button>
 
@@ -551,7 +551,7 @@ export const ChatWindow: React.FC = () => {
                     }}>
                         <div style={{ textAlign: 'center', color: '#a29bfe' }}>
                             <div style={{ fontSize: '48px', marginBottom: '12px' }}>📎</div>
-                            <div style={{ fontSize: '18px', fontWeight: 700 }}>Отпустите файл для отправки</div>
+                            <div style={{ fontSize: '18px', fontWeight: 700 }}>{T[lang].chat.drop_file}</div>
                         </div>
                     </div>
                 )}
@@ -587,14 +587,14 @@ export const ChatWindow: React.FC = () => {
                         )}
                     </div>
                     <div className="chat-header-info">
-                        <div className="chat-header-name">{activeChat.name || 'Контакт'}</div>
+                        <div className="chat-header-name">{activeChat.name || T[lang].sidebar.unknown}</div>
                         <div className={`chat-header-status ${isContactOnline ? 'online' : ''}`}>
                             {isTyping ? (
-                                <span className="typing-text">печатает<span className="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>
+                                <span className="typing-text">{T[lang].status.typing}<span className="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>
                             ) : isContactOnline ? (
-                                <span><span className="online-dot"></span> в сети</span>
+                                <span><span className="online-dot"></span> {T[lang].status.online}</span>
                             ) : (
-                                'не в сети'
+                                T[lang].status.offline
                             )}
                         </div>
                     </div>
@@ -631,19 +631,32 @@ export const ChatWindow: React.FC = () => {
 
                         <div className="pinned-carousel">
                             {pinnedMessages[activeChat.id].map((m, idx) => {
+<<<<<<< HEAD
                                 const senderName = m.senderId === user?.id ? 'Вы' : (activeChat.name || 'Контакт');
                                 const preview = m.type === 'image' ? '📷 Фото'
                                     : m.type === 'audio' ? '🎤 Голосовое'
                                         : m.type === 'video' ? '🎬 Видео'
                                             : m.type === 'file' ? '📎 Файл'
                                                 : m.type === 'sticker' ? '✨ Стикер'
+=======
+                                const senderName = m.senderId === user?.id ? T[lang].chat.you : (activeChat.name || T[lang].sidebar.unknown);
+                                const preview = m.type === 'image' ? T[lang].chat.msg_image
+                                    : m.type === 'audio' ? T[lang].chat.msg_audio
+                                        : m.type === 'video' ? T[lang].chat.msg_video
+                                            : m.type === 'file' ? T[lang].chat.msg_file
+                                                : m.type === 'sticker' ? T[lang].chat.msg_sticker
+>>>>>>> 7d31703 (UI refinement: polished settings modal, fixed tab alignment, and updated profile ID view)
                                                     : m.content.slice(0, 60) + (m.content.length > 60 ? '…' : '');
                                 return (
                                     <div key={m.id} className="pinned-item-mini" onClick={() => {
                                         const el = document.getElementById(`msg-${m.id}`);
                                         el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                     }}>
+<<<<<<< HEAD
                                         <div className="pinned-label">Закреплено {idx > 0 ? `#${idx + 1}` : ''}</div>
+=======
+                                        <div className="pinned-label">{T[lang].chat.pinned} {idx > 0 ? `#${idx + 1}` : ''}</div>
+>>>>>>> 7d31703 (UI refinement: polished settings modal, fixed tab alignment, and updated profile ID view)
                                         <div className="pinned-sender">{senderName}</div>
                                         <div className="pinned-content">{preview}</div>
                                     </div>
@@ -674,14 +687,14 @@ export const ChatWindow: React.FC = () => {
                             ref={searchInputRef}
                             type="text"
                             className="search-input"
-                            placeholder="🔍 Поиск по сообщениям..."
+                            placeholder={T[lang].chat.search_inline}
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             onClick={e => e.stopPropagation()}
                         />
                         {searchQuery && (
                             <span className="search-count">
-                                {displayMessages.length} результатов
+                                {displayMessages.length} {T[lang].chat.search_results}
                             </span>
                         )}
                         <button className="btn btn-ghost" onClick={() => { setSearchMode(false); setSearchQuery(''); }}>✕</button>
@@ -696,7 +709,7 @@ export const ChatWindow: React.FC = () => {
                                 {searchMode ? '🔍' : '👋'}
                             </div>
                             <div style={{ color: 'var(--text-secondary)' }}>
-                                {searchMode ? 'Ничего не найдено' : 'Начните защищённую переписку'}
+                                {searchMode ? T[lang].chat.search_not_found : T[lang].chat.start_secure}
                             </div>
                         </div>
                     ) : (
@@ -720,18 +733,17 @@ export const ChatWindow: React.FC = () => {
                                             }
                                         }}
                                     >
-                                        {/* Reply preview */}
                                         {msg.replyTo && (repliedMsg || msg.replyContent) && (
                                             <div className="reply-preview">
                                                 <div className="reply-preview-sender">
-                                                    {msg.replySender || (repliedMsg?.senderId === user?.id ? 'Вы' : activeChat.name)}
+                                                    {msg.replySender || (repliedMsg?.senderId === user?.id ? T[lang].chat.you : activeChat.name)}
                                                 </div>
                                                 <div className="reply-preview-text">
-                                                    {repliedMsg?.type === 'image' ? '📷 Изображение'
-                                                        : repliedMsg?.type === 'audio' ? '🎵 Голосовое'
-                                                            : repliedMsg?.type === 'video' ? '🎬 Видео'
-                                                                : repliedMsg?.type === 'file' ? '📎 Файл'
-                                                                    : repliedMsg?.type === 'sticker' ? '✨ Стикер'
+                                                    {repliedMsg?.type === 'image' ? T[lang].chat.msg_image
+                                                        : repliedMsg?.type === 'audio' ? T[lang].chat.msg_audio
+                                                            : repliedMsg?.type === 'video' ? T[lang].chat.msg_video
+                                                                : repliedMsg?.type === 'file' ? T[lang].chat.msg_file
+                                                                    : repliedMsg?.type === 'sticker' ? T[lang].chat.msg_sticker
                                                                         : repliedMsg?.content || msg.replyContent || ''}
                                                 </div>
                                             </div>
@@ -1055,7 +1067,11 @@ export const ChatWindow: React.FC = () => {
                         {/* Message textarea */}
                         <textarea
                             className="message-input"
+<<<<<<< HEAD
                             placeholder={isSelfDestruct ? '🔥 Одноразовое сообщение...' : replyTo ? `Ответить ${replyTo.senderId === user?.id ? 'себе' : activeChat.name}...` : 'Введите сообщение...'}
+=======
+                            placeholder={isSelfDestruct ? `🔥 ${T[lang].chat.self_destruct}...` : replyTo ? `${T[lang].chat.reply} ${replyTo.senderId === user?.id ? T[lang].chat.you : activeChat.name}...` : T[lang].chat.type_message}
+>>>>>>> 7d31703 (UI refinement: polished settings modal, fixed tab alignment, and updated profile ID view)
                             value={inputValue}
                             onChange={handleInputChange}
                             onKeyPress={handleKeyPress}

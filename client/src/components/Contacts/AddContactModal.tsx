@@ -4,6 +4,7 @@ import { useStore } from '../../store/useStore';
 import { Chat } from '../../types';
 import { API_BASE_URL } from '../../config';
 import { socketService } from '../../socket/socketService';
+import { T } from '../../locales';
 
 interface AddContactModalProps {
     isOpen: boolean;
@@ -16,15 +17,15 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
     const [isLoading, setIsLoading] = useState(false);
     const [searchResults, setSearchResults] = useState<any[]>([]);
 
-    const { user, chats, setChats, setActiveChat, addContact } = useStore();
+    const { user, chats, setChats, setActiveChat, addContact, lang } = useStore();
 
     const handleAdd = async (targetId?: string) => {
         setError('');
         const id = (targetId || contactId).trim();
 
-        if (!id) { setError('Введите ID контакта'); return; }
-        if (!id.startsWith('NYX-')) { setError('ID должен начинаться с NYX-  (например: NYX-7sj8nf6R)'); return; }
-        if (id.toLowerCase() === user?.id?.toLowerCase()) { setError('Это ваш собственный ID 😄'); return; }
+        if (!id) { setError(T[lang].add_contact.error_empty); return; }
+        if (!id.startsWith('NYX-')) { setError(T[lang].add_contact.error_format); return; }
+        if (id.toLowerCase() === user?.id?.toLowerCase()) { setError(T[lang].add_contact.error_self); return; }
 
         const existingChat = chats.find(c =>
             c.type === 'private' && c.participants.some(p => p.toLowerCase() === id.toLowerCase())
@@ -38,15 +39,15 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
 
             if (!response.ok) {
                 if (response.status === 404) {
-                    setError(`Пользователь "${id}" не найден. Убедитесь что ID введён точно.`);
+                    setError(T[lang].add_contact.error_not_found.replace('{id}', id));
                 } else {
-                    setError('Ошибка сервера. Попробуйте позже.');
+                    setError(T[lang].auth.error_network);
                 }
                 return;
             }
 
             const result = await response.json();
-            if (!result.success) { setError('Пользователь не найден'); return; }
+            if (!result.success) { setError(T[lang].add_contact.error_not_found_short); return; }
 
             const foundUser = result.data;
 
@@ -59,7 +60,7 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
             });
 
             const chatResult = await chatRes.json();
-            if (!chatResult.success) throw new Error('Не удалось создать чат');
+            if (!chatResult.success) throw new Error(T[lang].add_contact.error_create_chat);
 
             const serverChatId = chatResult.data.chatId;
             const newChat: Chat = {
@@ -79,7 +80,7 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
             setSearchResults([]);
         } catch (err: any) {
             console.error('Add contact error:', err);
-            setError('Ошибка сети. Проверьте подключение.');
+            setError(T[lang].auth.error_network);
         } finally {
             setIsLoading(false);
         }
@@ -87,7 +88,7 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
 
     const handleSearch = async () => {
         const q = contactId.trim();
-        if (q.length < 3) { setError('Введите минимум 3 символа для поиска'); return; }
+        if (q.length < 3) { setError(T[lang].add_contact.error_search_short); return; }
         setError(''); setIsLoading(true);
         try {
             const serverUrl = API_BASE_URL.replace(/\/$/, '');
@@ -97,9 +98,9 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
                 setSearchResults(result.data);
             } else {
                 setSearchResults([]);
-                setError('По никнейму никого не найдено');
+                setError(T[lang].add_contact.error_search_not_found);
             }
-        } catch { setError('Ошибка поиска'); }
+        } catch { setError(T[lang].add_contact.error_search); }
         finally { setIsLoading(false); }
     };
 
@@ -111,28 +112,28 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
 
                 {/* Header */}
                 <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>➕ Добавить контакт</h2>
+                    <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>➕ {T[lang].add_contact.title}</h2>
                     <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>✕</button>
                 </div>
 
                 <div style={{ padding: '20px 24px' }}>
                     {/* Your ID */}
                     <div style={{ background: 'rgba(108,92,231,0.08)', border: '1px solid rgba(108,92,231,0.2)', borderRadius: '12px', padding: '12px 16px', marginBottom: '20px' }}>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>Ваш ID — поделитесь с другом</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '6px' }}>{T[lang].add_contact.your_id_tip}</div>
                         <div style={{ fontFamily: 'monospace', fontSize: '16px', fontWeight: 700, color: '#a29bfe', letterSpacing: '1px' }}>{user?.id}</div>
                         <button onClick={() => { navigator.clipboard.writeText(user?.id || ''); }} style={{ marginTop: '8px', padding: '4px 12px', background: 'rgba(108,92,231,0.2)', border: '1px solid rgba(108,92,231,0.3)', borderRadius: '6px', color: '#a29bfe', cursor: 'pointer', fontSize: '12px' }}>
-                            📋 Копировать
+                            📋 {T[lang].settings.copy_id}
                         </button>
                     </div>
 
                     {/* Input */}
                     <div style={{ marginBottom: '12px' }}>
                         <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                            ID контакта или никнейм
+                            {T[lang].add_contact.input_label}
                         </label>
                         <input
                             type="text"
-                            placeholder="NYX-XXXXXXXX или @nickname"
+                            placeholder={T[lang].add_contact.input_placeholder}
                             value={contactId}
                             onChange={e => { setContactId(e.target.value); setError(''); setSearchResults([]); }}
                             onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
@@ -145,7 +146,7 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
                     {/* Search results */}
                     {searchResults.length > 0 && (
                         <div style={{ marginBottom: '12px' }}>
-                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>Найдено:</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>{T[lang].add_contact.found}:</div>
                             {searchResults.map(u => (
                                 <button key={u.id} onClick={() => handleAdd(u.id)} style={{ width: '100%', padding: '10px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
                                     <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #6c5ce7, #a29bfe)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>
@@ -163,7 +164,7 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
                     {/* Buttons */}
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <button onClick={onClose} style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '14px' }}>
-                            Отмена
+                            {T[lang].sidebar.cancel}
                         </button>
                         {!contactId.startsWith('NYX-') && contactId.trim().length >= 3 && (
                             <button onClick={handleSearch} disabled={isLoading} style={{ padding: '12px 16px', background: 'rgba(108,92,231,0.2)', border: '1px solid rgba(108,92,231,0.4)', borderRadius: '10px', color: '#a29bfe', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>
@@ -175,7 +176,7 @@ export const AddContactModal: React.FC<AddContactModalProps> = ({ isOpen, onClos
                             disabled={isLoading || !contactId.trim()}
                             style={{ flex: 1, padding: '12px', background: (isLoading || !contactId.trim()) ? 'rgba(108,92,231,0.3)' : 'linear-gradient(135deg, #6c5ce7, #a29bfe)', border: 'none', borderRadius: '10px', color: '#fff', cursor: (isLoading || !contactId.trim()) ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: 700, boxShadow: '0 4px 15px rgba(108,92,231,0.4)' }}
                         >
-                            {isLoading ? '⏳ Поиск...' : '✓ Добавить'}
+                            {isLoading ? `⏳ ${T[lang].chat.searching}` : `✓ ${T[lang].add_contact.btn_add}`}
                         </button>
                     </div>
                 </div>

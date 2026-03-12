@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { useStore } from '../../store/useStore';
+import { T } from '../../locales';
 
 export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
     const { user, lang, setLanguage, stealthMode, toggleStealthMode, theme, setTheme } = useStore();
@@ -51,7 +52,7 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                     padding: '20px 24px',
                     borderBottom: '1px solid rgba(255,255,255,0.06)'
                 }}>
-                    <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>⚙️ Настройки</h2>
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>⚙️ {T[lang].settings.title}</h2>
                     <button
                         onClick={onClose}
                         style={{
@@ -76,9 +77,9 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                     borderBottom: '1px solid rgba(255,255,255,0.06)'
                 }}>
                     {([
-                        { id: 'profile', label: '👤 Профиль' },
-                        { id: 'privacy', label: '🛡️ Приватность' },
-                        { id: 'appearance', label: '🎨 Вид' }
+                        { id: 'profile', label: `👤 ${T[lang].settings.profile}` },
+                        { id: 'privacy', label: `🛡️ ${T[lang].settings.privacy}` },
+                        { id: 'appearance', label: `🎨 ${T[lang].settings.appearance}` }
                     ] as const).map(tab => (
                         <button
                             key={tab.id}
@@ -93,6 +94,7 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                                 fontSize: '13px',
                                 fontWeight: activeTab === tab.id ? 600 : 400,
                                 borderBottom: activeTab === tab.id ? '2px solid #a29bfe' : '2px solid transparent',
+                                marginBottom: '-1px', // overlap the container border
                                 transition: 'all 0.2s'
                             }}
                         >{tab.label}</button>
@@ -127,7 +129,7 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                                 <div style={{ textAlign: 'center' }}>
                                     <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{user.nickname}</div>
                                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                        Анонимный пользователь
+                                        {T[lang].settings.anonymous_user}
                                     </div>
                                 </div>
                             </div>
@@ -137,22 +139,27 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                                 background: 'rgba(108, 92, 231, 0.08)',
                                 border: '1px solid rgba(108, 92, 231, 0.2)',
                                 borderRadius: '12px',
-                                padding: '16px'
+                                padding: '16px',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center'
                             }}>
-                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
-                                    Ваш Nyx ID
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px' }}>
+                                    {T[lang].settings.your_id}
                                 </div>
                                 <div style={{
                                     fontFamily: 'monospace',
-                                    fontSize: '18px',
+                                    fontSize: '20px',
                                     fontWeight: 700,
                                     color: '#a29bfe',
                                     letterSpacing: '2px',
-                                    marginBottom: '12px'
+                                    marginBottom: '16px',
+                                    background: 'rgba(0,0,0,0.2)',
+                                    padding: '8px 16px',
+                                    borderRadius: '8px',
+                                    border: '1px solid rgba(108, 92, 231, 0.2)'
                                 }}>
                                     {user.id}
                                 </div>
-                                <div style={{ display: 'flex', gap: '8px' }}>
+                                <div style={{ display: 'flex', width: '100%', gap: '8px' }}>
                                     <button
                                         onClick={() => {
                                             navigator.clipboard.writeText(user.id);
@@ -160,8 +167,8 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                                             setTimeout(() => setIdCopied(false), 2000);
                                         }}
                                         style={{
-                                            flex: 1,
-                                            padding: '8px',
+                                            width: '100%',
+                                            padding: '10px',
                                             background: idCopied ? 'rgba(0, 243, 160, 0.2)' : 'rgba(108, 92, 231, 0.2)',
                                             border: `1px solid ${idCopied ? 'rgba(0, 243, 160, 0.4)' : 'rgba(108, 92, 231, 0.3)'}`,
                                             borderRadius: '8px',
@@ -169,14 +176,17 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                                             cursor: 'pointer',
                                             fontSize: '13px',
                                             fontWeight: 600,
-                                            transition: 'all 0.2s'
+                                            transition: 'all 0.2s',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                                         }}
                                     >
-                                        {idCopied ? '✅ Скопировано!' : '📋 Копировать ID'}
+                                        <span style={{ fontSize: '16px' }}>{idCopied ? '✅' : '📋'}</span>
+                                        <span>{idCopied ? T[lang].settings.copied : T[lang].settings.copy_id}</span>
                                     </button>
                                 </div>
-                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                                    💡 Поделитесь этим ID с друзьями для начала чата
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span style={{ fontSize: '14px' }}>💡</span>
+                                    <span>{T[lang].settings.share_tip}</span>
                                 </div>
                             </div>
                         </div>
@@ -188,8 +198,8 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                             {/* Stealth Mode */}
                             <SettingsRow
                                 icon="🥷"
-                                title="Stealth Mode"
-                                description="Скрывает статус онлайн и отчёты о прочтении"
+                                title={T[lang].settings.stealth_mode}
+                                description={T[lang].settings.stealth_desc}
                             >
                                 <Toggle checked={stealthMode} onChange={toggleStealthMode} />
                             </SettingsRow>
@@ -205,10 +215,10 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                                     <span style={{ fontSize: '20px' }}>🔐</span>
                                     <div>
                                         <div style={{ fontWeight: 600, color: '#00f3a0', fontSize: '14px', marginBottom: '4px' }}>
-                                            Сквозное шифрование активно
+                                            {T[lang].settings.e2e_active}
                                         </div>
                                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                                            Все сообщения шифруются на вашем устройстве. Сервер не может прочитать ваши переписки.
+                                            {T[lang].settings.e2e_desc}
                                         </div>
                                     </div>
                                 </div>
@@ -222,67 +232,94 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                             {/* Theme */}
                             <div>
                                 <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px' }}>
-                                    Тема оформления
+                                    {T[lang].settings.theme}
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                                     {([
-                                        { id: 'dark', label: '🌑 Чёрная', colors: ['#0a0a0f', '#6c5ce7'] },
-                                        { id: 'light', label: '☀️ Белая', colors: ['#f0f2f5', '#4a6ee0'] },
-                                        { id: 'cyberpunk', label: '🌆 Киберпанк', colors: ['#050508', '#00f3ff', '#ff007f'] },
+                                        { id: 'dark', label: T[lang].settings.theme_dark, icon: '🌑', colors: ['#0a0a0f', '#6c5ce7'] },
+                                        { id: 'light', label: T[lang].settings.theme_light, icon: '☀️', colors: ['#f0f2f5', '#4a6ee0'] },
+                                        { id: 'cyberpunk', label: T[lang].settings.theme_cyberpunk, icon: '🌆', colors: ['#050508', '#00f3ff', '#ff007f'] },
                                     ] as const).map(t => (
                                         <button
                                             key={t.id}
                                             onClick={() => setTheme(t.id)}
                                             style={{
-                                                padding: '12px',
+                                                minHeight: '84px',
+                                                padding: '12px 4px',
                                                 background: theme === t.id ? 'rgba(108, 92, 231, 0.15)' : 'rgba(255,255,255,0.04)',
                                                 border: `2px solid ${theme === t.id ? '#6c5ce7' : 'rgba(255,255,255,0.08)'}`,
                                                 borderRadius: '12px',
                                                 cursor: 'pointer',
                                                 display: 'flex',
+                                                flexDirection: 'column',
                                                 alignItems: 'center',
-                                                gap: '10px',
-                                                color: '#fff',
+                                                justifyContent: 'center',
+                                                gap: '8px',
+                                                color: 'var(--text-primary)',
                                                 fontSize: '13px',
                                                 fontWeight: 600,
-                                                transition: 'all 0.2s'
+                                                transition: 'all 0.2s',
+                                                position: 'relative',
+                                                overflow: 'hidden'
                                             }}
                                         >
-                                            <div style={{ display: 'flex', gap: '4px' }}>
+                                            <div style={{ display: 'flex', gap: '6px', height: '24px', alignItems: 'center' }}>
                                                 {t.colors.map((c, i) => (
-                                                    <div key={i} style={{ width: 16, height: 16, borderRadius: '50%', background: c, border: '1px solid rgba(255,255,255,0.2)' }} />
+                                                    <div key={i} style={{ width: 16, height: 16, borderRadius: '50%', background: c, border: '1px solid rgba(255,255,255,0.15)' }} />
                                                 ))}
                                             </div>
-                                            {t.label}
-                                            {theme === t.id && <span style={{ marginLeft: 'auto', color: '#6c5ce7' }}>✓</span>}
+                                            <div style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <span>{t.icon}</span>
+                                                <span>{t.label}</span>
+                                            </div>
+                                            {theme === t.id && <span style={{ position: 'absolute', top: 6, right: 8, color: '#6c5ce7', fontSize: '14px', fontWeight: 'bold' }}>✓</span>}
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
                             {/* Language */}
-                            <SettingsRow
-                                icon="🌐"
-                                title="Язык интерфейса"
-                                description="Язык всех надписей в приложении"
-                            >
-                                <select
-                                    value={lang}
-                                    onChange={e => setLanguage(e.target.value as 'ru' | 'en')}
-                                    style={{
-                                        padding: '6px 10px',
-                                        background: 'rgba(255,255,255,0.08)',
-                                        color: 'white',
-                                        border: '1px solid rgba(255,255,255,0.1)',
-                                        borderRadius: '8px',
-                                        cursor: 'pointer',
-                                        fontSize: '13px'
-                                    }}
-                                >
-                                    <option value="ru">🇷🇺 Русский</option>
-                                    <option value="en">🇺🇸 English</option>
-                                </select>
-                            </SettingsRow>
+                            <div>
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px', marginTop: '8px' }}>
+                                    {T[lang].settings.language}
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                                    {([
+                                        { id: 'ru', label: 'Русский', icon: 'RU' },
+                                        { id: 'en', label: 'English', icon: 'EN' },
+                                        { id: 'uk', label: 'Українська', icon: 'UA' }
+                                    ] as const).map(l => (
+                                        <button
+                                            key={l.id}
+                                            onClick={() => setLanguage(l.id as 'ru' | 'en' | 'uk')}
+                                            style={{
+                                                minHeight: '84px',
+                                                padding: '12px 4px',
+                                                background: lang === l.id ? 'rgba(108, 92, 231, 0.15)' : 'rgba(255,255,255,0.04)',
+                                                border: `2px solid ${lang === l.id ? '#6c5ce7' : 'rgba(255,255,255,0.08)'}`,
+                                                borderRadius: '12px',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '8px',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '13px',
+                                                fontWeight: 600,
+                                                transition: 'all 0.2s',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            <div style={{ height: '24px', display: 'flex', alignItems: 'center', fontSize: '20px', fontWeight: 800, letterSpacing: '1px' }}>
+                                                {l.icon}
+                                            </div>
+                                            <span style={{ whiteSpace: 'nowrap' }}>{l.label}</span>
+                                            {lang === l.id && <span style={{ position: 'absolute', top: 6, right: 8, color: '#6c5ce7', fontSize: '14px', fontWeight: 'bold' }}>✓</span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -295,7 +332,7 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                     justifyContent: 'center'
                 }}>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                        Nyx Messenger v2.0 • E2E Encrypted
+                        {T[lang].settings.version}
                     </div>
                 </div>
             </div>

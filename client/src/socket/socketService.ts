@@ -73,9 +73,31 @@ class SocketService {
                 }
             }
 
-            // Show browser push notification if tab not focused
-            if (document.hidden && data.senderId !== user?.id) {
-                this.showNotification(data.senderName || 'Nyx', data.encryptedContent);
+            // Show browser push notification if tab not focused, otherwise show in-app Toast
+            if (data.senderId !== user?.id) {
+                const isTabActive = !document.hidden;
+                const activeChatId = useStore.getState().activeChat?.id;
+
+                if (!isTabActive) {
+                    this.showNotification(data.senderName || 'Nyx', data.encryptedContent);
+                } else if (activeChatId !== data.chatId) {
+                    // Show in-app premium toast if looking at another chat
+                    const chat = chats.find(c => c.id === data.chatId);
+
+                    let preview = data.type === 'image' ? '📷 Фото'
+                        : data.type === 'audio' ? '🎤 Голосовое сообщение'
+                            : data.type === 'video' ? '🎬 Видео'
+                                : data.type === 'file' ? '📎 Файл'
+                                    : data.type === 'sticker' ? '✨ Стикер'
+                                        : data.encryptedContent;
+
+                    useStore.getState().addToast({
+                        title: data.senderName || chat?.name || 'Новое сообщение',
+                        body: preview,
+                        avatar: chat?.avatar,
+                        chatId: data.chatId
+                    });
+                }
             }
         });
 
@@ -133,11 +155,11 @@ class SocketService {
         if (!('Notification' in window)) return;
 
         if (Notification.permission === 'granted') {
-            new Notification(`Nyx — ${title}`, {
+            new Notification(title, {
                 body: body.length > 60 ? body.slice(0, 60) + '...' : body,
                 icon: '/logo.png',
                 badge: '/logo.png',
-                tag: 'nyx-message'
+                tag: 'nyx-app-message'
             });
         }
     }

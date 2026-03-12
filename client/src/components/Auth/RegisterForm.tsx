@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { cryptoService } from '../../crypto/cryptoService';
 import { API_BASE_URL } from '../../config';
+import { T } from '../../locales';
 
 export const RegisterForm: React.FC = () => {
+    const { setUser, lang } = useStore();
     const [nickname, setNickname] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [generatedId, setGeneratedId] = useState<string | null>(null);
     const [selectedAvatar, setSelectedAvatar] = useState('/avatars/avatar1.png');
-    const setUser = useStore((state) => state.setUser);
 
     const AVATARS = [
         '/avatars/avatar1.png',
@@ -25,17 +26,17 @@ export const RegisterForm: React.FC = () => {
         setError('');
 
         if (!nickname.trim()) {
-            setError('Введите никнейм');
+            setError(T[lang].auth.error_empty);
             return;
         }
 
         if (nickname.length < 3) {
-            setError('Никнейм должен быть не менее 3 символов');
+            setError(T[lang].auth.error_short);
             return;
         }
 
         if (nickname.length > 20) {
-            setError('Никнейм должен быть не более 20 символов');
+            setError(T[lang].auth.error_long);
             return;
         }
 
@@ -83,7 +84,7 @@ export const RegisterForm: React.FC = () => {
             setUser(user);
         } catch (err: any) {
             setGeneratedId(null);
-            setError(err.message || 'Ошибка сети. Проверьте соединение.');
+            setError(err.message || T[lang].auth.error_network);
             console.error(err);
         } finally {
             setIsLoading(false);
@@ -111,26 +112,26 @@ export const RegisterForm: React.FC = () => {
                         </div>
 
                         <h2 style={{ textAlign: 'center', marginBottom: '16px', color: 'var(--success)' }}>
-                            ✓ Регистрация завершена!
+                            {T[lang].auth.success_title}
                         </h2>
 
                         <div className="user-id-display">
-                            <div className="user-id-label">Ваш уникальный ID</div>
+                            <div className="user-id-label">{T[lang].auth.your_id_label}</div>
                             <div className="user-id-value">{generatedId}</div>
                             <button className="btn btn-secondary user-id-copy" onClick={copyId}>
-                                📋 Скопировать ID
+                                {T[lang].auth.copy_id_btn}
                             </button>
                         </div>
 
                         <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px' }}>
-                            Сохраните этот ID! Он нужен для добавления в контакты.
+                            {T[lang].auth.save_id_tip}
                         </p>
 
                         <button
                             className="btn btn-primary auth-submit"
                             onClick={() => window.location.reload()}
                         >
-                            Начать общение →
+                            {T[lang].auth.start_chat_btn}
                         </button>
                     </div>
                 </div>
@@ -153,16 +154,16 @@ export const RegisterForm: React.FC = () => {
                     </div>
 
                     <p className="auth-title">
-                        Анонимный защищённый мессенджер
+                        {T[lang].auth.title}
                     </p>
 
                     <form onSubmit={handleRegister}>
                         <div className="form-group">
-                            <label className="form-label">Выберите никнейм</label>
+                            <label className="form-label">{T[lang].auth.choose_nickname}</label>
                             <input
                                 type="text"
                                 className={`form-input ${error ? 'error' : ''}`}
-                                placeholder="Ваш никнейм"
+                                placeholder={T[lang].auth.placeholder_nickname}
                                 value={nickname}
                                 onChange={(e) => setNickname(e.target.value)}
                                 disabled={isLoading}
@@ -172,7 +173,7 @@ export const RegisterForm: React.FC = () => {
                         </div>
 
                         <div className="form-group">
-                            <label className="form-label">Выберите аватар</label>
+                            <label className="form-label">{T[lang].auth.choose_avatar}</label>
                             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px', justifyContent: 'center' }}>
                                 {AVATARS.map((avatar, index) => (
                                     <img
@@ -204,11 +205,11 @@ export const RegisterForm: React.FC = () => {
                             color: 'var(--text-secondary)'
                         }}>
                             <div className="encryption-badge" style={{ marginBottom: '8px' }}>
-                                🔐 E2E шифрование
+                                🔐 {T[lang].auth.e2e_badge}
                             </div>
-                            • Без номера телефона и email<br />
-                            • Без сбора персональных данных<br />
-                            • Уникальный ID генерируется автоматически
+                            {T[lang].auth.feature_1}<br />
+                            {T[lang].auth.feature_2}<br />
+                            {T[lang].auth.feature_3}
                         </div>
 
                         <button
@@ -219,10 +220,10 @@ export const RegisterForm: React.FC = () => {
                             {isLoading ? (
                                 <>
                                     <span className="spinner" style={{ width: '20px', height: '20px' }}></span>
-                                    Создание...
+                                    {T[lang].auth.submitting}
                                 </>
                             ) : (
-                                'Создать аккаунт'
+                                T[lang].auth.submit_btn
                             )}
                         </button>
                     </form>

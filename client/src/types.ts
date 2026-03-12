@@ -37,6 +37,15 @@ export interface Message {
     selfDestruct?: boolean;
 }
 
+// Toast Notification
+export interface ToastData {
+    id: string;
+    title: string;
+    body: string;
+    avatar?: string;
+    chatId?: string;
+}
+
 export interface EncryptedMessage {
     id: string;
     chatId: string;
