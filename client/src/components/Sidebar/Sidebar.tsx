@@ -46,6 +46,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
 
     // Filter and sort chats by search and latest message
     const sortedChats = [...chats].sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
         const timeA = a.lastMessage?.timestamp ? new Date(a.lastMessage.timestamp).getTime() : 0;
         const timeB = b.lastMessage?.timestamp ? new Date(b.lastMessage.timestamp).getTime() : 0;
         return timeB - timeA;
@@ -147,7 +149,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                 </div>
 
                                 <div className="chat-info">
-                                    <div className="chat-name">{chat.name || 'Неизвестный'}</div>
+                                    <div className="chat-name">
+                                        {chat.isMuted && <span style={{ marginRight: '4px', fontSize: '11px', color: 'var(--text-secondary)' }}>🔕</span>}
+                                        {chat.name || 'Неизвестный'}
+                                    </div>
                                     <div className="chat-preview">{getLastMessagePreview(chat)}</div>
                                 </div>
 
@@ -155,9 +160,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                     {chat.lastMessage && (
                                         <div className="chat-time">{formatTime(chat.lastMessage.timestamp)}</div>
                                     )}
-                                    {chat.unreadCount > 0 && (
-                                        <div className="unread-badge">{chat.unreadCount}</div>
-                                    )}
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                                        {chat.unreadCount > 0 && (
+                                            <div className="unread-badge" style={{ background: chat.isMuted ? 'var(--text-secondary)' : undefined }}>
+                                                {chat.unreadCount}
+                                            </div>
+                                        )}
+                                        {chat.isPinned && <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>📌</div>}
+                                    </div>
                                 </div>
                             </div>
                         );
@@ -168,20 +178,35 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
             {chatContextMenu && (
                 <div
                     className="context-menu"
-                    style={{ top: chatContextMenu.y, left: chatContextMenu.x, zIndex: 1000 }}
+                    style={{ top: chatContextMenu.y, left: chatContextMenu.x, zIndex: 1000, width: '200px' }}
                     onClick={e => e.stopPropagation()}
                 >
-                    <button className="context-menu-item danger" onClick={() => {
-                        if (window.confirm(`Вы уверены, что хотите удалить чат с ${chatContextMenu.chat.name || 'Неизвестный'}? Это действие нельзя отменить.`)) {
-                            socketService.deleteChat(chatContextMenu.chat.id);
-                        }
+                    <button className="context-menu-item" onClick={() => {
+                        useStore.getState().toggleChatPin(chatContextMenu.chat.id);
                         setChatContextMenu(null);
                     }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
+                        📌 {chatContextMenu.chat.isPinned ? 'Открепить' : 'Закрепить'}
+                    </button>
+                    <button className="context-menu-item" onClick={() => {
+                        useStore.getState().toggleChatMute(chatContextMenu.chat.id);
+                        setChatContextMenu(null);
+                    }}>
+                        {chatContextMenu.chat.isMuted ? '🔔 Включить звук' : '🔕 Без звука'}
+                    </button>
+                    <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', margin: '4px 0' }} />
+                    <button className="context-menu-item danger" onClick={() => {
+                        setChatContextMenu(null);
+                        // Trigger delete custom logic
+                        if (window.confirm(`Вы уверены, что хотите удалить чат с ${chatContextMenu.chat.name || 'Неизвестный'}? Это полностью удалит переписку у обоих.`)) {
+                            socketService.deleteChat(chatContextMenu.chat.id);
+                            if (activeChat?.id === chatContextMenu.chat.id) {
+                                setActiveChat(null);
+                            }
+                        }
+                    }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            <line x1="10" y1="11" x2="10" y2="17"></line>
-                            <line x1="14" y1="11" x2="14" y2="17"></line>
                         </svg>
                         Удалить чат
                     </button>

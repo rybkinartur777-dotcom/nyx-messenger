@@ -607,22 +607,6 @@ export const ChatWindow: React.FC = () => {
                         >
                             🔍
                         </button>
-                        <button
-                            className="btn btn-ghost"
-                            title="Удалить чат"
-                            onClick={(e) => { 
-                                e.stopPropagation(); 
-                                if (window.confirm(`Вы уверены, что хотите удалить чат с ${activeChat.name}? Это действие навсегда удалит переписку у обоих участников.`)) {
-                                    import('../../socket/socketService').then(({ socketService }) => {
-                                        socketService.deleteChat(activeChat.id);
-                                        useStore.getState().setActiveChat(null);
-                                    });
-                                }
-                            }}
-                            style={{ fontSize: '16px', color: '#ff4757', opacity: 0.8 }}
-                        >
-                            🗑️
-                        </button>
                         <div
                             className="encryption-badge"
                             style={{ cursor: 'pointer' }}

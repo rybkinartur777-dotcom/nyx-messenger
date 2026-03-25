@@ -364,15 +364,17 @@ select {
 .chat-item {
     display: flex;
     align-items: center;
+    padding: 12px 16px;
     gap: 12px;
-    padding: 10px 12px;
-    margin: 4px 8px;
-    border-radius: 12px;
     cursor: pointer;
-    transition: all var(--transition);
+    border-bottom: 1px solid var(--border);
+    transition: all 0.2s ease;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
     position: relative;
+    overflow: hidden;
 }
-
 .chat-item:hover {
     background: var(--bg-hover);
 }
@@ -2164,6 +2166,33 @@ select {
 
 .context-menu-item.danger:hover {
     background: rgba(248, 113, 113, 0.12);
+}
+
+@media (max-width: 768px) {
+    .context-menu {
+        position: fixed !important;
+        top: auto !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        border-radius: 20px 20px 0 0 !important;
+        padding: 16px 16px calc(env(safe-area-inset-bottom) + 16px) 16px !important;
+        animation: slideUpSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        border-bottom: none !important;
+    }
+    .context-menu-item {
+        padding: 14px 16px;
+        font-size: 15px;
+        border-radius: 12px;
+    }
+    .context-menu-item:not(:last-child) {
+        margin-bottom: 6px;
+    }
+}
+
+@keyframes slideUpSheet {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
 
 /* Image / video message */

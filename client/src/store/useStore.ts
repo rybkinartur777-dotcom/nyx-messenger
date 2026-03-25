@@ -57,6 +57,8 @@ interface AppState {
     toggleStealthMode: () => void;
     addToast: (toast: Omit<ToastData, 'id'>) => void;
     removeToast: (id: string) => void;
+    toggleChatPin: (chatId: string) => void;
+    toggleChatMute: (chatId: string) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -299,6 +301,12 @@ export const useStore = create<AppState>()(
                     set((state) => ({ toasts: state.toasts.filter(t => t.id !== id) }));
                 }, 300);
             },
+            toggleChatPin: (chatId) => set((state) => ({
+                chats: state.chats.map(c => c.id === chatId ? { ...c, isPinned: !c.isPinned } : c)
+            })),
+            toggleChatMute: (chatId) => set((state) => ({
+                chats: state.chats.map(c => c.id === chatId ? { ...c, isMuted: !c.isMuted } : c)
+            }))
         }),
         {
             name: 'nyx-storage',

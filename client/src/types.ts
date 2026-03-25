@@ -72,6 +72,8 @@ export interface Chat {
     lastMessage?: Message;
     unreadCount: number;
     createdAt: Date;
+    isPinned?: boolean;
+    isMuted?: boolean;
 }
 
 // Contact types
