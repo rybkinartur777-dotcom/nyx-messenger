@@ -6,6 +6,7 @@ import { API_BASE_URL } from '../config';
 class SocketService {
     private socket: Socket | null = null;
     private serverUrl = API_BASE_URL;
+    private processedMessageIds = new Set<string>();
 
     connect(userId: string) {
         if (this.socket) return;
@@ -24,6 +25,10 @@ class SocketService {
         });
 
         this.socket.on('message:new', async (data: any) => {
+            if (this.processedMessageIds.has(data.id)) return;
+            this.processedMessageIds.add(data.id);
+            if (this.processedMessageIds.size > 1000) this.processedMessageIds.clear();
+
             const { addMessage, updateChatLastMessage, chats, setChats, user, messages } = useStore.getState();
 
             // Find reply info if message is a reply
