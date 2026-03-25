@@ -234,20 +234,27 @@ export const ChatWindow: React.FC = () => {
 
     // Self-destruct timer logic
     useEffect(() => {
-        const socket = socketService.getSocket();
-        if (!socket) return;
-
-        const handleSelfDestruct = (data: { messageId: string, delay: number }) => {
-            setTimeout(() => {
-                deleteMessageLocal(data.messageId);
-            }, data.delay);
-        };
-
-        socket.on('message:burn', handleSelfDestruct);
-        return () => {
-            socket.off('message:burn', handleSelfDestruct);
-        };
-    }, []);
+        if (!activeChat || !user) return;
+        const delay = 10000; // 10 seconds
+        
+        chatMessages.forEach(msg => {
+            if (msg.selfDestruct) {
+                // If it's my own message OR I have read it, boom trigger
+                if (msg.status === 'read' || msg.senderId === user.id) {
+                    const elapsed = Date.now() - new Date(msg.timestamp).getTime();
+                    if (elapsed < delay) {
+                        setTimeout(() => {
+                            useStore.getState().deleteMessageLocal(msg.id);
+                            socketService.deleteMessage(activeChat.id, msg.id, user.id);
+                        }, delay - elapsed);
+                    } else {
+                        useStore.getState().deleteMessageLocal(msg.id);
+                        socketService.deleteMessage(activeChat.id, msg.id, user.id);
+                    }
+                }
+            }
+        });
+    }, [chatMessages, activeChat, user]);
 
     // Link preview helpers
     const getYoutubeId = (url: string) => {
@@ -320,7 +327,14 @@ export const ChatWindow: React.FC = () => {
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mediaRecorder = new MediaRecorder(stream);
+            
+            // Fix for iOS Safari using strictly supported formats
+            let mimeType = '';
+            if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+            else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
+            else if (MediaRecorder.isTypeSupported('audio/ogg')) mimeType = 'audio/ogg';
+
+            const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
             mediaRecorderRef.current = mediaRecorder;
             audioChunksRef.current = [];
             setRecordingTime(0);
@@ -335,7 +349,8 @@ export const ChatWindow: React.FC = () => {
 
             mediaRecorder.onstop = () => {
                 if (shouldSendRef.current) {
-                    const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                    const finalMime = mediaRecorder.mimeType || 'audio/mp4'; // Default to mp4 layout for iOS
+                    const audioBlob = new Blob(audioChunksRef.current, { type: finalMime });
                     const reader = new FileReader();
                     reader.onload = () => {
                         const base64 = reader.result as string;

@@ -15,6 +15,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
     const [showSettings, setShowSettings] = useState(false);
     const [idCopied, setIdCopied] = useState(false);
     const [chatContextMenu, setChatContextMenu] = useState<{ x: number, y: number, chat: Chat } | null>(null);
+    const touchTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hasScrolledRef = React.useRef(false);
 
     // Close context menu on outside click
     React.useEffect(() => {
@@ -124,6 +126,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                 onClick={() => {
                                     setActiveChat(chat);
                                     if (window.innerWidth <= 768) toggleSidebar();
+                                }}
+                                onTouchStart={(e) => {
+                                    hasScrolledRef.current = false;
+                                    const touch = e.touches[0];
+                                    touchTimeoutRef.current = setTimeout(() => {
+                                        if (hasScrolledRef.current) return;
+                                        setChatContextMenu({ x: touch.clientX, y: Math.min(touch.clientY, window.innerHeight - 200), chat });
+                                        if (navigator.vibrate) navigator.vibrate(50);
+                                    }, 400); // 400ms long press
+                                }}
+                                onTouchMove={() => {
+                                    hasScrolledRef.current = true;
+                                    if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
+                                }}
+                                onTouchEnd={() => {
+                                    if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
+                                }}
+                                onTouchCancel={() => {
+                                    if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
                                 }}
                                 onContextMenu={(e) => {
                                     e.preventDefault();
