@@ -45,8 +45,12 @@ export const ChatWindow: React.FC = () => {
     const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const shouldSendRef = useRef<boolean>(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
+    const touchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hasScrolledRef = useRef(false);
 
     const chatMessages = activeChat ? messages[activeChat.id] || [] : [];
+
+    // Initial load tracking for scroll logic
 
     // Get contact user id (the other participant)
     const contactUserId = activeChat?.participants.find(p => p !== user?.id);
@@ -729,6 +733,33 @@ export const ChatWindow: React.FC = () => {
                                     <div
                                         className={`message ${isOwn ? 'outgoing' : 'incoming'} ${msg.type === 'sticker' ? 'sticker-only' : ''} ${searchMode && searchQuery && msg.content.toLowerCase().includes(searchQuery.toLowerCase()) ? 'message-highlight' : ''}`}
                                         onContextMenu={(e) => handleContextMenu(e, msg)}
+                                        onTouchStart={(e) => {
+                                            hasScrolledRef.current = false;
+                                            const touch = e.touches[0];
+                                            touchTimeoutRef.current = setTimeout(() => {
+                                                if (hasScrolledRef.current) return;
+                                                const MENU_W = 190;
+                                                const MENU_H = 170;
+                                                const cw = window.innerWidth;
+                                                const ch = window.innerHeight;
+                                                let x = touch.clientX;
+                                                let y = touch.clientY;
+                                                if (x + MENU_W > cw) x = cw - MENU_W;
+                                                if (y + MENU_H > ch) y = ch - MENU_H;
+                                                setContextMenu({ x: Math.max(8, x), y: Math.max(8, y), message: msg });
+                                                if (navigator.vibrate) navigator.vibrate(50);
+                                            }, 400); // 400ms long press trigger
+                                        }}
+                                        onTouchMove={() => {
+                                            hasScrolledRef.current = true;
+                                            if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
+                                        }}
+                                        onTouchEnd={() => {
+                                            if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
+                                        }}
+                                        onTouchCancel={() => {
+                                            if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
+                                        }}
                                         onDoubleClick={() => {
                                             if (isOwn && msg.type === 'text') {
                                                 setEditingMessage({ id: msg.id, content: msg.content });
