@@ -288,12 +288,17 @@ export const useStore = create<AppState>()(
                 set((state) => ({ toasts: [...state.toasts, { ...toast, id }] }));
                 // Auto remove after 5s
                 setTimeout(() => {
-                    set((state) => ({ toasts: state.toasts.filter(t => t.id !== id) }));
+                    get().removeToast(id);
                 }, 5000);
             },
-            removeToast: (id) => set((state) => ({
-                toasts: state.toasts.filter(t => t.id !== id)
-            })),
+            removeToast: (id) => {
+                set((state) => ({
+                    toasts: state.toasts.map(t => t.id === id ? { ...t, isExiting: true } : t)
+                }));
+                setTimeout(() => {
+                    set((state) => ({ toasts: state.toasts.filter(t => t.id !== id) }));
+                }, 300);
+            },
         }),
         {
             name: 'nyx-storage',

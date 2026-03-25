@@ -91,12 +91,17 @@ class SocketService {
                                     : data.type === 'sticker' ? '✨ Стикер'
                                         : data.encryptedContent;
 
-                    useStore.getState().addToast({
-                        title: data.senderName || chat?.name || 'Новое сообщение',
-                        body: preview,
-                        avatar: chat?.avatar,
-                        chatId: data.chatId
-                    });
+                    const lastToasts = useStore.getState().toasts;
+                    // Deduplication: prevent double toasts from the server's double socket emit
+                    if (!lastToasts.find(t => t.toastMessageId === data.id)) {
+                        useStore.getState().addToast({
+                            title: data.senderName || chat?.name || 'Новое сообщение',
+                            body: preview,
+                            avatar: chat?.avatar,
+                            chatId: data.chatId,
+                            toastMessageId: data.id
+                        });
+                    }
                 }
             }
         });

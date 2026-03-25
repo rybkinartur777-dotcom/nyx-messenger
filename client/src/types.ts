@@ -44,6 +44,8 @@ export interface ToastData {
     body: string;
     avatar?: string;
     chatId?: string;
+    toastMessageId?: string;
+    isExiting?: boolean;
 }
 
 export interface EncryptedMessage {

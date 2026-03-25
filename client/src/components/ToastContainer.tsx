@@ -25,7 +25,7 @@ export const ToastContainer: React.FC = () => {
     return (
         <div className="toast-container">
             {toasts.map((toast) => (
-                <div key={toast.id} className="toast" onClick={() => handleToastClick(toast)}>
+                <div key={toast.id} className={`toast ${toast.isExiting ? 'toast-exit' : ''}`} onClick={() => handleToastClick(toast)}>
                     <div className="toast-avatar">
                         {toast.avatar ? (
                             <img src={toast.avatar} alt="Avatar" />

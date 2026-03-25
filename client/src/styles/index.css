@@ -3198,6 +3198,16 @@ select {
     pointer-events: none;
 }
 
+@keyframes toastSlideOut {
+    0% { transform: translateY(0); opacity: 1; margin-bottom: 0; }
+    100% { transform: translateY(-20px) scale(0.95); opacity: 0; margin-bottom: -68px; }
+}
+
+.toast-exit {
+    animation: toastSlideOut 0.3s cubic-bezier(0.8, 0, 0.2, 1) forwards !important;
+    pointer-events: none;
+}
+
 .toast {
     pointer-events: auto;
     width: 340px;
