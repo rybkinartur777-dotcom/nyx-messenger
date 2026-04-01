@@ -11,9 +11,10 @@ import { T } from './locales';
 import { StarField } from './components/StarField';
 import { ToastContainer } from './components/ToastContainer';
 import { setupWebPush } from './socket/pushService';
+import { PinModal } from './components/Auth/PinModal';
 
 const App: React.FC = () => {
-    const { isAuthenticated, user, setChats, chats, theme, lang } = useStore();
+    const { isAuthenticated, user, setChats, chats, theme, lang, pinCode, isLocked, setLocked } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [showAddContact, setShowAddContact] = useState(false);
     const [isNinjaMode, setIsNinjaMode] = useState(false);
@@ -41,6 +42,7 @@ const App: React.FC = () => {
                     socketService.connect(user.id);
                     // Initialize background Web Push notifications
                     setupWebPush(user.id);
+                    if (pinCode) setLocked(true);
                 }
             } catch (err) {
                 console.error('Failed to initialize crypto:', err);
@@ -67,7 +69,11 @@ const App: React.FC = () => {
 
         const idleTimer = setTimeout(() => {
             if (isAuthenticated && !isNinjaMode) {
-                setIsNinjaMode(true);
+                if (pinCode) {
+                    setLocked(true);
+                } else {
+                    setIsNinjaMode(true);
+                }
             }
         }, 5 * 60 * 1000); // 5 minutes idle
 
@@ -125,6 +131,10 @@ const App: React.FC = () => {
 
     if (!isAuthenticated) {
         return <RegisterForm />;
+    }
+
+    if (pinCode && isLocked) {
+        return <PinModal mode="unlock" onSuccess={() => setLocked(false)} />;
     }
 
     return (

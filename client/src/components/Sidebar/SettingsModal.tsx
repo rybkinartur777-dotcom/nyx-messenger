@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { useStore } from '../../store/useStore';
 import { T } from '../../locales';
+import { PinModal } from '../Auth/PinModal';
 
 export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-    const { user, lang, setLanguage, stealthMode, toggleStealthMode, theme, setTheme } = useStore();
+    const { user, lang, setLanguage, stealthMode, toggleStealthMode, theme, setTheme, pinCode, setPinCode } = useStore();
     const [idCopied, setIdCopied] = useState(false);
     const [activeTab, setActiveTab] = useState<'profile' | 'privacy' | 'appearance'>('profile');
+    const [showPinSetter, setShowPinSetter] = useState(false);
 
     if (!isOpen || !user) return null;
 
@@ -203,6 +205,59 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                             >
                                 <Toggle checked={stealthMode} onChange={toggleStealthMode} />
                             </SettingsRow>
+
+                            {/* PIN Code Lock */}
+                            <SettingsRow
+                                icon="🔐"
+                                title="PIN-код приложения"
+                                description={pinCode ? "Пароль установлен" : "Дополнительная защита для входа"}
+                            >
+                                <button
+                                    onClick={() => setShowPinSetter(true)}
+                                    style={{
+                                        background: pinCode ? 'rgba(0, 243, 160, 0.15)' : 'rgba(108, 92, 231, 0.15)',
+                                        border: '1px solid currentColor',
+                                        color: pinCode ? '#00f3a0' : '#a29bfe',
+                                        padding: '6px 14px',
+                                        borderRadius: '8px',
+                                        fontSize: '13px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {pinCode ? 'Изменить' : 'Установить'}
+                                </button>
+                            </SettingsRow>
+                            
+                            {pinCode && (
+                                <button 
+                                    onClick={() => {
+                                        if (window.confirm('Вы уверены, что хотите сбросить PIN-код?')) {
+                                            setPinCode(null);
+                                        }
+                                    }}
+                                    style={{
+                                        alignSelf: 'flex-start',
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#ff4757',
+                                        fontSize: '12px',
+                                        marginTop: '-4px',
+                                        marginLeft: '16px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Сбросить пароль
+                                </button>
+                            )}
+
+                            {showPinSetter && (
+                                <PinModal 
+                                    mode="set" 
+                                    onSuccess={() => setShowPinSetter(false)} 
+                                    onCancel={() => setShowPinSetter(false)} 
+                                />
+                            )}
 
                             {/* E2E info */}
                             <div style={{
