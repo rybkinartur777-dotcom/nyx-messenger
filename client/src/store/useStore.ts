@@ -32,6 +32,7 @@ interface AppState {
     fakePinCode: string | null; // Plausible deniability PIN
     isLocked: boolean; // App lock status
     isFakeMode: boolean; // True if logged in via fake PIN
+    ghostMode: boolean; // Hide online presence from others
 
     // Actions
     setUser: (user: User | null) => void;
@@ -70,6 +71,7 @@ interface AppState {
     setLocked: (locked: boolean) => void;
     setFakeMode: (isFake: boolean) => void;
     panicWipe: () => void;
+    toggleGhostMode: () => void;
 }
 
 export const useStore = create<AppState>()(
@@ -96,6 +98,7 @@ export const useStore = create<AppState>()(
             fakePinCode: null,
             isLocked: false,
             isFakeMode: false,
+            ghostMode: false,
 
             // Actions
             setUser: (user) => set({
@@ -351,14 +354,26 @@ export const useStore = create<AppState>()(
                     isLocked: false,
                     isFakeMode: false,
                     stealthMode: false,
+                    ghostMode: false,
                 });
                 // Nuke persisted storage
                 localStorage.removeItem('nyx-storage');
                 // Disconnect socket
-                try {
-                    const { socketService } = require('../socket/socketService');
-                    socketService.disconnect();
-                } catch (_) { /* ignore */ }
+                import('../socket/socketService').then(m => {
+                    m.socketService.disconnect();
+                }).catch(() => {});
+            },
+            toggleGhostMode: () => {
+                const current = get().ghostMode;
+                set({ ghostMode: !current });
+                // Notify server
+                import('../socket/socketService').then(m => {
+                    const socket = m.socketService.getSocket();
+                    const userId = get().user?.id;
+                    if (socket && userId) {
+                        socket.emit('user:ghost', { userId, enabled: !current });
+                    }
+                }).catch(() => {});
             },
         }),
         {
@@ -375,6 +390,7 @@ export const useStore = create<AppState>()(
                 deletedMessageIds: Array.from(state.deletedMessageIds), // persists as array
                 pinCode: state.pinCode,
                 fakePinCode: state.fakePinCode,
+                ghostMode: state.ghostMode,
                 isFakeMode: false // Never persist fake mode being active
             }),
             onRehydrateStorage: () => (state) => {

@@ -15,6 +15,7 @@ interface UserSockets {
 
 const onlineUsers: OnlineUsers = {};
 const userSockets: UserSockets = {};
+const ghostUsers: Set<string> = new Set(); // Users who hide their online status
 
 export function setupSocketHandlers(io: Server) {
     io.on('connection', (socket: Socket) => {
@@ -45,14 +46,32 @@ export function setupSocketHandlers(io: Server) {
                 console.log('No chats found for user or table missing');
             }
 
-            // Broadcast online status to everyone else
-            socket.broadcast.emit('user:online', userId);
+            // Broadcast online status to everyone else (unless ghost mode)
+            if (!ghostUsers.has(userId)) {
+                socket.broadcast.emit('user:online', userId);
+            }
 
             // Send list of ALL currently online users to the newly connected user
-            const onlineUserIds = [...new Set(Object.values(onlineUsers).map(u => u.userId))];
+            // Filter out ghost users from the list
+            const onlineUserIds = [...new Set(Object.values(onlineUsers).map(u => u.userId))]
+                .filter(id => !ghostUsers.has(id));
             socket.emit('user:online:list', onlineUserIds);
 
             console.log(`✓ User ${userId} authenticated, online: ${onlineUserIds.length} users`);
+        });
+
+        // Ghost mode toggle
+        socket.on('user:ghost', (data: { userId: string; enabled: boolean }) => {
+            if (data.enabled) {
+                ghostUsers.add(data.userId);
+                // Tell everyone this user went "offline"
+                socket.broadcast.emit('user:offline', data.userId);
+            } else {
+                ghostUsers.delete(data.userId);
+                // Reappear as online
+                socket.broadcast.emit('user:online', data.userId);
+            }
+            console.log(`👻 Ghost mode ${data.enabled ? 'ON' : 'OFF'} for ${data.userId}`);
         });
 
         // New message
@@ -299,6 +318,7 @@ export function setupSocketHandlers(io: Server) {
 
                     if (userSockets[userId].length === 0) {
                         delete userSockets[userId];
+                        ghostUsers.delete(userId); // Clean up ghost status
                         socket.broadcast.emit('user:offline', userId);
                     }
                 }
