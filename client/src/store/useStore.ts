@@ -35,6 +35,7 @@ interface AppState {
     ghostMode: boolean; // Hide online presence from others
     lockedChatIds: Record<string, string>; // chatId -> specific chat password
     screenSecurity: boolean; // Blur app on focus loss and detect screenshots
+    autoDeleteTimers: Record<string, number>; // chatId -> seconds of inactivity before deletion (0 means off)
 
     // Actions
     setUser: (user: User | null) => void;
@@ -76,6 +77,7 @@ interface AppState {
     toggleGhostMode: () => void;
     setChatLock: (chatId: string, password: string | null) => void;
     toggleScreenSecurity: () => void;
+    setChatAutoDelete: (chatId: string, seconds: number) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -105,6 +107,7 @@ export const useStore = create<AppState>()(
             ghostMode: false,
             lockedChatIds: {},
             screenSecurity: true, // Enabled by default for premium feel
+            autoDeleteTimers: {},
 
             // Actions
             setUser: (user) => set({
@@ -391,6 +394,15 @@ export const useStore = create<AppState>()(
                 return { lockedChatIds: newLocks };
             }),
             toggleScreenSecurity: () => set(state => ({ screenSecurity: !state.screenSecurity })),
+            setChatAutoDelete: (chatId, seconds) => set(state => {
+                const newTimers = { ...state.autoDeleteTimers };
+                if (seconds > 0) {
+                    newTimers[chatId] = seconds;
+                } else {
+                    delete newTimers[chatId];
+                }
+                return { autoDeleteTimers: newTimers };
+            }),
         }),
         {
             name: 'nyx-storage',
@@ -409,6 +421,7 @@ export const useStore = create<AppState>()(
                 ghostMode: state.ghostMode,
                 lockedChatIds: state.lockedChatIds,
                 screenSecurity: state.screenSecurity,
+                autoDeleteTimers: state.autoDeleteTimers,
                 isFakeMode: false // Never persist fake mode being active
             }),
             onRehydrateStorage: () => (state) => {

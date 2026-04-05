@@ -16,7 +16,7 @@ export const ChatWindow: React.FC = () => {
     const {
         activeChat, user, messages, chats, setMessages, markMessagesAsRead, onlineUsers,
         pinMessage, unpinMessage, pinnedMessages, lang, toggleSidebar,
-        stealthMode, setActiveChat, getLastSeen
+        stealthMode, setActiveChat, getLastSeen, autoDeleteTimers, setChatAutoDelete
     } = useStore();
     const [inputValue, setInputValue] = useState('');
     const [showStickers, setShowStickers] = useState(false);
@@ -36,6 +36,7 @@ export const ChatWindow: React.FC = () => {
     const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
     const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
+    const [showAutoDeleteMenu, setShowAutoDeleteMenu] = useState(false);
     // Mobile: bottom sheet context menu
     const [bottomSheet, setBottomSheet] = useState<{ message: Message } | null>(null);
     // Self-destruct countdown: messageId -> seconds remaining
@@ -549,6 +550,35 @@ export const ChatWindow: React.FC = () => {
     // Reply helper
     const getReplyMessage = (replyId: string) => chatMessages.find(m => m.id === replyId);
 
+    // Auto-delete inactive chats logic
+    useEffect(() => {
+        const checkInterval = setInterval(() => {
+            const timers = useStore.getState().autoDeleteTimers;
+            const chatsList = useStore.getState().chats;
+            const now = Date.now();
+
+            chatsList.forEach(chat => {
+                const timerSeconds = timers[chat.id];
+                if (timerSeconds && timerSeconds > 0) {
+                    const lastMsgTime = chat.lastMessage?.timestamp 
+                        ? new Date(chat.lastMessage.timestamp).getTime() 
+                        : (chat.createdAt ? new Date(chat.createdAt).getTime() : now);
+                    
+                    const inactivityMs = now - lastMsgTime;
+                    if (inactivityMs > timerSeconds * 1000) {
+                        console.log(`Auto-deleting chat ${chat.id} due to inactivity`);
+                        socketService.deleteChat(chat.id);
+                        if (useStore.getState().activeChat?.id === chat.id) {
+                            useStore.getState().setActiveChat(null);
+                        }
+                    }
+                }
+            });
+        }, 30000); // Check every 30 seconds
+
+        return () => clearInterval(checkInterval);
+    }, []);
+
     if (!activeChat) {
         return (
             <div className="main-chat">
@@ -714,6 +744,50 @@ export const ChatWindow: React.FC = () => {
                             onClick={() => setShowEncryptionModal(true)}
                         >
                             🔐 E2E
+                        </div>
+                        <div style={{ position: 'relative' }}>
+                            <button
+                                className={`btn btn-ghost ${autoDeleteTimers[activeChat.id] ? 'active' : ''}`}
+                                title="Таймер авто-удаления"
+                                onClick={(e) => { e.stopPropagation(); setShowAutoDeleteMenu(!showAutoDeleteMenu); }}
+                                style={{ fontSize: '16px', position: 'relative' }}
+                            >
+                                ⏱️
+                                {autoDeleteTimers[activeChat.id] && (
+                                    <span style={{ position: 'absolute', top: '2px', right: '2px', width: '6px', height: '6px', background: 'var(--accent-primary)', borderRadius: '50%' }} />
+                                )}
+                            </button>
+                            {showAutoDeleteMenu && (
+                                <div style={{
+                                    position: 'absolute', top: '100%', right: 0, marginTop: '8px',
+                                    background: 'var(--glass-bg)', backdropFilter: 'blur(20px)',
+                                    border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px',
+                                    padding: '8px', zIndex: 1000, width: '180px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
+                                }}>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '4px 8px 8px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '4px' }}>
+                                        Авто-удаление чата через:
+                                    </div>
+                                    {[
+                                        { label: '🔥 Выключено', val: 0 },
+                                        { label: '⏳ 1 час', val: 3600 },
+                                        { label: '⏳ 24 часа', val: 86400 },
+                                        { label: '⏳ 7 дней', val: 604800 },
+                                    ].map(opt => (
+                                        <button
+                                            key={opt.val}
+                                            onClick={() => { setChatAutoDelete(activeChat.id, opt.val); setShowAutoDeleteMenu(false); }}
+                                            style={{
+                                                width: '100%', padding: '10px 12px', background: autoDeleteTimers[activeChat.id] === opt.val ? 'rgba(255,255,255,0.05)' : 'none',
+                                                border: 'none', borderRadius: '8px', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', fontSize: '13px',
+                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                            }}
+                                        >
+                                            {opt.label}
+                                            {autoDeleteTimers[activeChat.id] === opt.val && <span style={{ color: 'var(--accent-primary)' }}>✓</span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
