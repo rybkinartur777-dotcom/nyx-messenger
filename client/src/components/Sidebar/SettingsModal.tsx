@@ -5,11 +5,13 @@ import { T } from '../../locales';
 import { PinModal } from '../Auth/PinModal';
 
 export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-    const { user, lang, setLanguage, stealthMode, toggleStealthMode, theme, setTheme, pinCode, setPinCode, fakePinCode, setFakePinCode } = useStore();
+    const { user, lang, setLanguage, stealthMode, toggleStealthMode, theme, setTheme, pinCode, setPinCode, fakePinCode, setFakePinCode, panicWipe } = useStore();
     const [idCopied, setIdCopied] = useState(false);
     const [activeTab, setActiveTab] = useState<'profile' | 'privacy' | 'appearance'>('profile');
     const [showPinSetter, setShowPinSetter] = useState(false);
     const [showFakePinSetter, setShowFakePinSetter] = useState(false);
+    const [panicStep, setPanicStep] = useState(0); // 0 = idle, 1 = confirm shown
+    const panicHoldTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
     if (!isOpen || !user) return null;
 
@@ -336,6 +338,120 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* PANIC BUTTON */}
+                            <div style={{
+                                marginTop: '12px',
+                                background: 'rgba(255, 71, 87, 0.06)',
+                                border: '1px solid rgba(255, 71, 87, 0.2)',
+                                borderRadius: '12px',
+                                padding: '16px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '12px'
+                            }}>
+                                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                                    <span style={{ fontSize: '20px' }}>🚨</span>
+                                    <div>
+                                        <div style={{ fontWeight: 600, color: '#ff4757', fontSize: '14px', marginBottom: '4px' }}>
+                                            Экстренное уничтожение
+                                        </div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                                            Мгновенно удаляет все чаты, сообщения, контакты и аккаунт с устройства. Данные невозможно восстановить.
+                                        </div>
+                                    </div>
+                                </div>
+                                {panicStep === 0 ? (
+                                    <button
+                                        onClick={() => setPanicStep(1)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            background: 'rgba(255, 71, 87, 0.15)',
+                                            border: '1px solid rgba(255, 71, 87, 0.3)',
+                                            borderRadius: '10px',
+                                            color: '#ff4757',
+                                            fontSize: '14px',
+                                            fontWeight: 700,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px'
+                                        }}
+                                    >
+                                        <span>💣</span> Кнопка паники
+                                    </button>
+                                ) : (
+                                    <button
+                                        onMouseDown={() => {
+                                            panicHoldTimerRef.current = setTimeout(() => {
+                                                panicWipe();
+                                                onClose();
+                                            }, 3000);
+                                        }}
+                                        onMouseUp={() => {
+                                            if (panicHoldTimerRef.current) {
+                                                clearTimeout(panicHoldTimerRef.current);
+                                                panicHoldTimerRef.current = null;
+                                            }
+                                        }}
+                                        onMouseLeave={() => {
+                                            if (panicHoldTimerRef.current) {
+                                                clearTimeout(panicHoldTimerRef.current);
+                                                panicHoldTimerRef.current = null;
+                                            }
+                                        }}
+                                        onTouchStart={() => {
+                                            panicHoldTimerRef.current = setTimeout(() => {
+                                                panicWipe();
+                                                onClose();
+                                            }, 3000);
+                                        }}
+                                        onTouchEnd={() => {
+                                            if (panicHoldTimerRef.current) {
+                                                clearTimeout(panicHoldTimerRef.current);
+                                                panicHoldTimerRef.current = null;
+                                            }
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            padding: '14px',
+                                            background: 'linear-gradient(135deg, #ff4757, #c0392b)',
+                                            border: 'none',
+                                            borderRadius: '10px',
+                                            color: '#fff',
+                                            fontSize: '14px',
+                                            fontWeight: 700,
+                                            cursor: 'pointer',
+                                            animation: 'pulse 1s ease infinite',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '8px',
+                                            boxShadow: '0 0 20px rgba(255, 71, 87, 0.4)'
+                                        }}
+                                    >
+                                        <span>⚠️</span> Удерживайте 3 сек для уничтожения
+                                    </button>
+                                )}
+                                {panicStep === 1 && (
+                                    <button
+                                        onClick={() => setPanicStep(0)}
+                                        style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: 'var(--text-secondary)',
+                                            fontSize: '12px',
+                                            cursor: 'pointer',
+                                            padding: '4px'
+                                        }}
+                                    >
+                                        Отмена
+                                    </button>
+                                )}
                             </div>
                         </div>
                     )}

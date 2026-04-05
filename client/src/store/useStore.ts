@@ -69,6 +69,7 @@ interface AppState {
     setFakePinCode: (pin: string | null) => void;
     setLocked: (locked: boolean) => void;
     setFakeMode: (isFake: boolean) => void;
+    panicWipe: () => void;
 }
 
 export const useStore = create<AppState>()(
@@ -331,6 +332,34 @@ export const useStore = create<AppState>()(
             setFakePinCode: (fakePinCode) => set({ fakePinCode }),
             setLocked: (isLocked) => set({ isLocked }),
             setFakeMode: (isFakeMode) => set({ isFakeMode }),
+            panicWipe: () => {
+                // Nuclear option: wipe everything
+                set({
+                    user: null,
+                    isAuthenticated: false,
+                    chats: [],
+                    activeChat: null,
+                    messages: {},
+                    contacts: [],
+                    onlineUsers: new Set<string>(),
+                    lastSeen: {},
+                    pinnedMessages: {},
+                    deletedMessageIds: new Set(),
+                    toasts: [],
+                    pinCode: null,
+                    fakePinCode: null,
+                    isLocked: false,
+                    isFakeMode: false,
+                    stealthMode: false,
+                });
+                // Nuke persisted storage
+                localStorage.removeItem('nyx-storage');
+                // Disconnect socket
+                try {
+                    const { socketService } = require('../socket/socketService');
+                    socketService.disconnect();
+                } catch (_) { /* ignore */ }
+            },
         }),
         {
             name: 'nyx-storage',
