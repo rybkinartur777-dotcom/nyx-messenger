@@ -34,6 +34,7 @@ interface AppState {
     isFakeMode: boolean; // True if logged in via fake PIN
     ghostMode: boolean; // Hide online presence from others
     lockedChatIds: Record<string, string>; // chatId -> specific chat password
+    screenSecurity: boolean; // Blur app on focus loss and detect screenshots
 
     // Actions
     setUser: (user: User | null) => void;
@@ -74,6 +75,7 @@ interface AppState {
     panicWipe: () => void;
     toggleGhostMode: () => void;
     setChatLock: (chatId: string, password: string | null) => void;
+    toggleScreenSecurity: () => void;
 }
 
 export const useStore = create<AppState>()(
@@ -102,6 +104,7 @@ export const useStore = create<AppState>()(
             isFakeMode: false,
             ghostMode: false,
             lockedChatIds: {},
+            screenSecurity: true, // Enabled by default for premium feel
 
             // Actions
             setUser: (user) => set({
@@ -387,6 +390,7 @@ export const useStore = create<AppState>()(
                 }
                 return { lockedChatIds: newLocks };
             }),
+            toggleScreenSecurity: () => set(state => ({ screenSecurity: !state.screenSecurity })),
         }),
         {
             name: 'nyx-storage',
@@ -404,6 +408,7 @@ export const useStore = create<AppState>()(
                 fakePinCode: state.fakePinCode,
                 ghostMode: state.ghostMode,
                 lockedChatIds: state.lockedChatIds,
+                screenSecurity: state.screenSecurity,
                 isFakeMode: false // Never persist fake mode being active
             }),
             onRehydrateStorage: () => (state) => {

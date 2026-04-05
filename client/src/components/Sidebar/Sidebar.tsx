@@ -14,11 +14,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
     const [chatSearch, setChatSearch] = useState('');
     const [confirmLogout, setConfirmLogout] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
-    const [idCopied, setIdCopied] = useState(false);
     const [chatContextMenu, setChatContextMenu] = useState<{ x: number, y: number, chat: Chat } | null>(null);
     const [showChatUnlock, setShowChatUnlock] = useState<Chat | null>(null);
-    const touchTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-    const hasScrolledRef = React.useRef(false);
     const [chatBottomSheet, setChatBottomSheet] = useState<{ chat: Chat } | null>(null);
     const isMobile = () => window.innerWidth <= 768 || ('ontouchstart' in window);
 
@@ -209,12 +206,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                         if (isLocked) {
                             setChatLock(chatContextMenu.chat.id, null);
                         } else {
-                            const pwd = window.prompt('Введите новый пароль для этого чата:');
+                            const pwd = window.prompt('Введите ПИН-код для чата:');
                             if (pwd) setChatLock(chatContextMenu.chat.id, pwd);
                         }
                         setChatContextMenu(null);
                     }}>
-                        {lockedChatIds[chatContextMenu.chat.id] ? '🔓 Разблокировать чат' : '🔒 Заблокировать чат'}
+                        {lockedChatIds[chatContextMenu.chat.id] ? '🔓 Убрать пароль' : '🔒 Пароль на чат'}
                     </button>
                     <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', margin: '4px 0' }} />
                     <button className="context-menu-item danger" onClick={() => {
@@ -229,18 +226,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
             )}
 
             {user && (
-                <div className="sidebar-footer" style={{ padding: '12px 14px', borderTop: '1px solid var(--border-color)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-                            {user.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', borderRadius: '12px', objectFit: 'cover' }} /> : user.nickname[0]?.toUpperCase()}
+                <div className="sidebar-footer" style={{ padding: '12px 14px', borderTop: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
+                    {confirmLogout ? (
+                        <div style={{ padding: '10px', background: 'rgba(255,71,87,0.1)', borderRadius: '12px' }}>
+                            <div style={{ fontSize: '13px', textAlign: 'center', marginBottom: '8px' }}>Выйти?</div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={() => setConfirmLogout(false)} style={{ flex: 1, padding: '6px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>Нет</button>
+                                <button onClick={() => { logout(); window.location.reload(); }} style={{ flex: 1, padding: '6px', borderRadius: '8px', background: 'rgba(255,71,87,0.2)', color: '#ff4757', border: '1px solid rgba(255,71,87,0.3)', cursor: 'pointer', fontWeight: 700 }}>Да</button>
+                            </div>
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.nickname}</div>
-                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => navigator.clipboard.writeText(user.id)}>{user.id.slice(0, 8)}...</div>
+                    ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                                {user.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', borderRadius: '12px', objectFit: 'cover' }} /> : user.nickname[0]?.toUpperCase()}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.nickname}</div>
+                                <div title="Копировать ID" style={{ fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => { navigator.clipboard.writeText(user.id); alert('ID скопирован'); }}>{user.id.slice(0, 8)}...</div>
+                            </div>
+                            <button onClick={() => setShowSettings(true)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '34px', height: '34px', borderRadius: '10px', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⚙️</button>
+                            <button onClick={() => setConfirmLogout(true)} style={{ background: 'rgba(255,71,87,0.1)', border: 'none', width: '34px', height: '34px', borderRadius: '10px', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🚪</button>
                         </div>
-                        <button onClick={() => setShowSettings(true)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>⚙️</button>
-                        <button onClick={() => logout()} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>🚪</button>
-                    </div>
+                    )}
                 </div>
             )}
 
@@ -269,13 +276,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                 </div>
             )}
 
-            {/* Mobile bottom sheet for chat actions */}
             {chatBottomSheet && (
                 <>
                     <div onClick={() => setChatBottomSheet(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9998 }} />
-                    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--bg-primary)', borderRadius: '20px 20px 0 0', zIndex: 9999, padding: '20px' }}>
-                        <button onClick={() => { socketService.deleteChat(chatBottomSheet.chat.id); setChatBottomSheet(null); }} style={{ width: '100%', padding: '15px', color: '#ff4757', background: 'none', border: 'none', textAlign: 'left', fontSize: '16px' }}>Удалить чат</button>
-                        <button onClick={() => setChatBottomSheet(null)} style={{ width: '100%', padding: '15px', background: 'none', border: 'none', textAlign: 'left', fontSize: '16px' }}>Отмена</button>
+                    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#1a1a1a', borderTop: '1px solid rgba(255,255,255,0.1)', borderRadius: '24px 24px 0 0', zIndex: 9999, padding: '20px' }}>
+                        <div style={{ height: '4px', width: '40px', background: 'rgba(255,255,255,0.2)', borderRadius: '2px', margin: '0 auto 20px' }} />
+                        <button onClick={() => { socketService.deleteChat(chatBottomSheet.chat.id); setChatBottomSheet(null); }} style={{ width: '100%', padding: '15px', color: '#ff4757', background: 'rgba(255,71,87,0.1)', border: 'none', borderRadius: '12px', textAlign: 'center', fontSize: '16px', fontWeight: 600 }}>Удалить чат</button>
+                        <button onClick={() => setChatBottomSheet(null)} style={{ width: '100%', padding: '15px', background: 'none', border: 'none', color: 'var(--text-secondary)', textAlign: 'center', fontSize: '16px', marginTop: '10px' }}>Отмена</button>
                     </div>
                 </>
             )}

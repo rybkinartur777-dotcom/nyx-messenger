@@ -14,10 +14,11 @@ import { setupWebPush } from './socket/pushService';
 import { PinModal } from './components/Auth/PinModal';
 
 const App: React.FC = () => {
-    const { isAuthenticated, user, setChats, chats, theme, lang, pinCode, isLocked, setLocked, isFakeMode } = useStore();
+    const { isAuthenticated, user, setChats, chats, theme, lang, pinCode, isLocked, setLocked, isFakeMode, screenSecurity, addToast } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [showAddContact, setShowAddContact] = useState(false);
     const [isNinjaMode, setIsNinjaMode] = useState(false);
+    const [isBlurred, setIsBlurred] = useState(false);
 
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme || 'dark');
@@ -122,6 +123,45 @@ const App: React.FC = () => {
         }
     }, [chats, isAuthenticated]);
 
+    // Handle screen security (blur on focus loss & screenshot detection)
+    useEffect(() => {
+        if (!screenSecurity) {
+            setIsBlurred(false);
+            return;
+        }
+
+        const handleBlur = () => setIsBlurred(true);
+        const handleFocus = () => setIsBlurred(false);
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'hidden') {
+                setIsBlurred(true);
+            } else {
+                setIsBlurred(false);
+            }
+        };
+
+        const handleKeydown = (e: KeyboardEvent) => {
+            if (e.key === 'PrintScreen' || (e.ctrlKey && e.key === 'p')) {
+                addToast({
+                    title: '⚠️ Безопасность',
+                    body: 'Скриншот контента может скомпрометировать вашу приватность.',
+                });
+            }
+        };
+
+        window.addEventListener('blur', handleBlur);
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('keydown', handleKeydown);
+
+        return () => {
+            window.removeEventListener('blur', handleBlur);
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('keydown', handleKeydown);
+        };
+    }, [screenSecurity, addToast]);
+
     if (isLoading) {
         return (
             <div className="auth-container">
@@ -138,19 +178,25 @@ const App: React.FC = () => {
     }
 
     if (pinCode && isLocked) {
-        return <PinModal mode="unlock" onSuccess={() => setLocked(false)} />;
+        return <PinModal mode="unlock" onSuccess={() => setLocked(false)} onCancel={() => {}} />;
     }
 
     return (
-        <div className="app">
+        <div className={`app-container ${theme} ${isBlurred ? 'privacy-blurred' : ''}`}>
             <StarField />
+            
+            <div style={isBlurred ? { filter: 'blur(30px)', transition: 'filter 0.3s' } : { transition: 'filter 0.3s' }}>
+                <Sidebar onAddContact={() => setShowAddContact(true)} />
+                <ChatWindow />
+                <ToastContainer />
+            </div>
 
-            <Sidebar onAddContact={() => setShowAddContact(true)} />
-            <ChatWindow />
-            <AddContactModal
-                isOpen={showAddContact}
-                onClose={() => setShowAddContact(false)}
-            />
+            {showAddContact && (
+                <AddContactModal
+                    isOpen={showAddContact}
+                    onClose={() => setShowAddContact(false)}
+                />
+            )}
 
             {isNinjaMode && (
                 <div

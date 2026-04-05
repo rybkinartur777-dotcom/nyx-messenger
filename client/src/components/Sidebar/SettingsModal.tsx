@@ -5,7 +5,7 @@ import { T } from '../../locales';
 import { PinModal } from '../Auth/PinModal';
 
 export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-    const { user, lang, setLanguage, stealthMode, toggleStealthMode, theme, setTheme, pinCode, setPinCode, fakePinCode, setFakePinCode, panicWipe, ghostMode, toggleGhostMode } = useStore();
+    const { user, lang, setLanguage, stealthMode, toggleStealthMode, theme, setTheme, pinCode, setPinCode, fakePinCode, setFakePinCode, panicWipe, ghostMode, toggleGhostMode, screenSecurity, toggleScreenSecurity } = useStore();
     const [idCopied, setIdCopied] = useState(false);
     const [activeTab, setActiveTab] = useState<'profile' | 'privacy' | 'appearance'>('profile');
     const [showPinSetter, setShowPinSetter] = useState(false);
@@ -216,6 +216,15 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                                 description="Скрывает ваш статус «В сети» от всех пользователей"
                             >
                                 <Toggle checked={ghostMode} onChange={toggleGhostMode} />
+                            </SettingsRow>
+
+                            {/* Screen Security */}
+                            <SettingsRow
+                                icon="🛡️"
+                                title="Защита экрана"
+                                description="Размывать экран при потере фокуса и детектировать скриншоты"
+                            >
+                                <Toggle checked={screenSecurity} onChange={toggleScreenSecurity} />
                             </SettingsRow>
 
                             {/* PIN Code Lock */}
