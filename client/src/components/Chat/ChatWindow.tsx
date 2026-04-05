@@ -48,6 +48,13 @@ export const ChatWindow: React.FC = () => {
     const touchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasScrolledRef = useRef(false);
 
+    // Premium Features State
+    const [burningIds, setBurningIds] = useState<Set<string>>(new Set());
+    const [swipeState, setSwipeState] = useState<{ id: string, offset: number } | null>(null);
+    const touchStartXRef = useRef<number | null>(null);
+    const touchStartYRef = useRef<number | null>(null);
+    const burningTimersRef = useRef<Set<string>>(new Set());
+
     const chatMessages = activeChat ? messages[activeChat.id] || [] : [];
 
     // Initial load tracking for scroll logic
@@ -242,18 +249,25 @@ export const ChatWindow: React.FC = () => {
         const delay = 10000; // 10 seconds
         
         chatMessages.forEach(msg => {
-            if (msg.selfDestruct) {
+            if (msg.selfDestruct && !burningTimersRef.current.has(msg.id)) {
                 // If it's my own message OR I have read it, boom trigger
                 if (msg.status === 'read' || msg.senderId === user.id) {
                     const elapsed = Date.now() - new Date(msg.timestamp).getTime();
-                    if (elapsed < delay) {
+                    burningTimersRef.current.add(msg.id);
+                    
+                    const triggerBurn = () => {
+                        setBurningIds(prev => { const n = new Set(prev); n.add(msg.id); return n; });
                         setTimeout(() => {
                             useStore.getState().deleteMessageLocal(msg.id);
                             socketService.deleteMessage(activeChat.id, msg.id, user.id);
-                        }, delay - elapsed);
+                            burningTimersRef.current.delete(msg.id);
+                        }, 1500); // 1.5s for burn animation
+                    };
+
+                    if (elapsed < delay) {
+                        setTimeout(triggerBurn, delay - elapsed);
                     } else {
-                        useStore.getState().deleteMessageLocal(msg.id);
-                        socketService.deleteMessage(activeChat.id, msg.id, user.id);
+                        triggerBurn();
                     }
                 }
             }
@@ -728,14 +742,20 @@ export const ChatWindow: React.FC = () => {
                                 <div
                                     key={msg.id}
                                     id={`msg-${msg.id}`}
-                                    className={`msg-wrapper ${isOwn ? 'outgoing' : 'incoming'}`}
+                                    className={`msg-wrapper ${isOwn ? 'outgoing' : 'incoming'} ${swipeState?.id === msg.id ? 'swiping' : ''}`}
                                 >
+                                    <div className="swipe-reply-icon" style={{ opacity: swipeState?.id === msg.id ? Math.min(1, Math.abs(swipeState.offset) / 50) : 0, transform: swipeState?.id === msg.id && swipeState.offset < -50 ? 'translateY(-50%) scale(1.2)' : 'translateY(-50%) scale(1)' }}>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>
+                                    </div>
                                     <div
-                                        className={`message ${isOwn ? 'outgoing' : 'incoming'} ${msg.type === 'sticker' ? 'sticker-only' : ''} ${searchMode && searchQuery && msg.content.toLowerCase().includes(searchQuery.toLowerCase()) ? 'message-highlight' : ''}`}
+                                        className={`message ${isOwn ? 'outgoing' : 'incoming'} ${msg.type === 'sticker' ? 'sticker-only' : ''} ${searchMode && searchQuery && msg.content.toLowerCase().includes(searchQuery.toLowerCase()) ? 'message-highlight' : ''} ${burningIds.has(msg.id) ? 'burning' : ''}`}
+                                        style={swipeState?.id === msg.id ? { transform: `translateX(${swipeState.offset}px)` } : undefined}
                                         onContextMenu={(e) => handleContextMenu(e, msg)}
                                         onTouchStart={(e) => {
                                             hasScrolledRef.current = false;
                                             const touch = e.touches[0];
+                                            touchStartXRef.current = touch.clientX;
+                                            touchStartYRef.current = touch.clientY;
                                             touchTimeoutRef.current = setTimeout(() => {
                                                 if (hasScrolledRef.current) return;
                                                 const MENU_W = 190;
@@ -750,15 +770,40 @@ export const ChatWindow: React.FC = () => {
                                                 if (navigator.vibrate) navigator.vibrate(50);
                                             }, 400); // 400ms long press trigger
                                         }}
-                                        onTouchMove={() => {
+                                        onTouchMove={(e) => {
                                             hasScrolledRef.current = true;
                                             if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
+                                            
+                                            // Swipe to reply logic
+                                            if (touchStartXRef.current !== null && touchStartYRef.current !== null) {
+                                                const touch = e.touches[0];
+                                                const diffX = touch.clientX - touchStartXRef.current;
+                                                const diffY = touch.clientY - touchStartYRef.current;
+                                                
+                                                // Only trigger if horizontal swipe is dominant
+                                                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
+                                                    // Left swipe for reply
+                                                    if (diffX < 0 && Math.abs(diffX) < 100) {
+                                                        setSwipeState({ id: msg.id, offset: diffX });
+                                                    }
+                                                }
+                                            }
                                         }}
                                         onTouchEnd={() => {
                                             if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
+                                            if (swipeState?.id === msg.id && swipeState.offset < -50) {
+                                                setReplyTo(msg);
+                                                if (navigator.vibrate) navigator.vibrate(50);
+                                            }
+                                            setSwipeState(null);
+                                            touchStartXRef.current = null;
+                                            touchStartYRef.current = null;
                                         }}
                                         onTouchCancel={() => {
                                             if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
+                                            setSwipeState(null);
+                                            touchStartXRef.current = null;
+                                            touchStartYRef.current = null;
                                         }}
                                         onDoubleClick={() => {
                                             if (isOwn && msg.type === 'text') {
