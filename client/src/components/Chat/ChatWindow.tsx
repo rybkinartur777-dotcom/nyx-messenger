@@ -16,7 +16,7 @@ export const ChatWindow: React.FC = () => {
     const {
         activeChat, user, messages, chats, setMessages, markMessagesAsRead, onlineUsers,
         pinMessage, unpinMessage, pinnedMessages, lang, deleteMessageLocal, toggleSidebar,
-        stealthMode, setActiveChat
+        stealthMode, setActiveChat, getLastSeen
     } = useStore();
     const [inputValue, setInputValue] = useState('');
     const [showStickers, setShowStickers] = useState(false);
@@ -36,6 +36,10 @@ export const ChatWindow: React.FC = () => {
     const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
     const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
+    // Mobile: bottom sheet context menu
+    const [bottomSheet, setBottomSheet] = useState<{ message: Message } | null>(null);
+    // Self-destruct countdown: messageId -> seconds remaining
+    const [selfDestructCountdowns, setSelfDestructCountdowns] = useState<Record<string, number>>({});
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -54,6 +58,10 @@ export const ChatWindow: React.FC = () => {
     const touchStartXRef = useRef<number | null>(null);
     const touchStartYRef = useRef<number | null>(null);
     const burningTimersRef = useRef<Set<string>>(new Set());
+    
+    // Bottom sheet & long press for mobile
+    const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isMobile = () => window.innerWidth <= 768 || ('ontouchstart' in window);
 
     const chatMessages = activeChat ? messages[activeChat.id] || [] : [];
 
@@ -101,17 +109,21 @@ export const ChatWindow: React.FC = () => {
     }, [activeChat, user]);
 
     useEffect(() => {
+        if (!activeChat) return;
+        let cancelled = false;
+
         const fetchMessages = async () => {
-            if (!activeChat) return;
             try {
                 const serverUrl = API_BASE_URL.replace(/\/$/, '');
                 const response = await fetch(`${serverUrl}/api/chats/${activeChat.id}/messages`);
                 const result = await response.json();
 
+                if (cancelled) return; // chat was switched while fetching
+
                 if (result.success) {
                     const formattedMessages = result.data.map((m: any) => ({
                         id: m.id,
-                        chatId: m.chatId,
+                        chatId: m.chatId || activeChat.id,
                         senderId: m.senderId,
                         content: m.encryptedContent,
                         type: m.message_type || 'text',
@@ -119,13 +131,26 @@ export const ChatWindow: React.FC = () => {
                         timestamp: new Date(m.timestamp),
                         status: m.status || (m.senderId !== user?.id ? 'read' : 'delivered'),
                         replyTo: m.replyTo,
+                        replyContent: m.replyContent,
+                        replySender: m.replySender,
                         reactions: m.reactions || [],
                         selfDestruct: m.self_destruct || m.selfDestruct
                     }));
-                    setMessages(activeChat.id, formattedMessages);
 
-                    if (formattedMessages.length > 0) {
-                        const hasUnreadIncoming = formattedMessages.some((m: any) => m.senderId !== user?.id && m.status !== 'read');
+                    // MERGE: keep local-only messages (optimistic updates) that aren't yet on the server
+                    const existingLocal = useStore.getState().messages[activeChat.id] || [];
+                    const serverIds = new Set(formattedMessages.map((m: any) => m.id));
+                    const localOnly = existingLocal.filter(m => !serverIds.has(m.id));
+
+                    // Combine server + local-only, sort by time
+                    const merged = [...formattedMessages, ...localOnly].sort(
+                        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+                    );
+
+                    setMessages(activeChat.id, merged);
+
+                    if (merged.length > 0) {
+                        const hasUnreadIncoming = merged.some((m: any) => m.senderId !== user?.id && m.status !== 'read');
                         if (hasUnreadIncoming && user && !stealthMode) {
                             socketService.getSocket()?.emit('message:read', { chatId: activeChat.id, userId: user.id });
                             markMessagesAsRead(activeChat.id, user.id);
@@ -134,11 +159,14 @@ export const ChatWindow: React.FC = () => {
                 }
             } catch (err) {
                 console.error('Error fetching messages:', err);
+                // Don't wipe local messages on fetch error — keep what we have
             }
         };
 
         fetchMessages();
+        return () => { cancelled = true; };
     }, [activeChat?.id]);
+
 
     useEffect(() => {
         if (messagesEndRef.current && !searchMode) {
@@ -149,10 +177,23 @@ export const ChatWindow: React.FC = () => {
         }
 
         if (activeChat && user && chatMessages.length > 0) {
-            const hasUnreadIncoming = chatMessages.some(m => m.senderId !== user.id && m.status !== 'read');
-            if (hasUnreadIncoming && !stealthMode) {
+            const unreadIncoming = chatMessages.filter(m => m.senderId !== user.id && m.status !== 'read');
+            
+            if (unreadIncoming.length > 0 && !stealthMode) {
+                // Regular read receipts for all
                 socketService.getSocket()?.emit('message:read', { chatId: activeChat.id, userId: user.id });
                 markMessagesAsRead(activeChat.id, user.id);
+
+                // Specific "burn" triggers for self-destructing messages
+                unreadIncoming.forEach(m => {
+                    if (m.selfDestruct) {
+                        socketService.getSocket()?.emit('message:read:specific', { 
+                            chatId: activeChat.id, 
+                            messageId: m.id, 
+                            userId: user.id 
+                        });
+                    }
+                });
             }
         }
     }, [chatMessages.length, activeChat, user, searchMode]);
@@ -165,7 +206,11 @@ export const ChatWindow: React.FC = () => {
             setEmojiPickerPos(null);
         };
         document.addEventListener('click', handleClick);
-        return () => document.removeEventListener('click', handleClick);
+        document.addEventListener('touchstart', handleClick);
+        return () => {
+            document.removeEventListener('click', handleClick);
+            document.removeEventListener('touchstart', handleClick);
+        };
     }, []);
 
     // Focus search input
@@ -243,36 +288,46 @@ export const ChatWindow: React.FC = () => {
         setIsSelfDestruct(false);
     };
 
-    // Self-destruct timer logic
+    // Self-destruct timer logic + countdown display
     useEffect(() => {
-        if (!activeChat || !user) return;
-        const delay = 10000; // 10 seconds
-        
-        chatMessages.forEach(msg => {
-            if (msg.selfDestruct && !burningTimersRef.current.has(msg.id)) {
-                // If it's my own message OR I have read it, boom trigger
-                if (msg.status === 'read' || msg.senderId === user.id) {
-                    const elapsed = Date.now() - new Date(msg.timestamp).getTime();
-                    burningTimersRef.current.add(msg.id);
-                    
-                    const triggerBurn = () => {
-                        setBurningIds(prev => { const n = new Set(prev); n.add(msg.id); return n; });
-                        setTimeout(() => {
-                            useStore.getState().deleteMessageLocal(msg.id);
-                            socketService.deleteMessage(activeChat.id, msg.id, user.id);
-                            burningTimersRef.current.delete(msg.id);
-                        }, 1500); // 1.5s for burn animation
-                    };
+        const handleSelfDestruct = (data: { messageId: string, delay: number }) => {
+            // Start countdown display
+            const totalSeconds = Math.round(data.delay / 1000);
+            setSelfDestructCountdowns(prev => ({ ...prev, [data.messageId]: totalSeconds }));
 
-                    if (elapsed < delay) {
-                        setTimeout(triggerBurn, delay - elapsed);
-                    } else {
-                        triggerBurn();
-                    }
+            // Countdown tick
+            let remaining = totalSeconds;
+            const tick = setInterval(() => {
+                remaining -= 1;
+                if (remaining <= 0) {
+                    clearInterval(tick);
+                    setSelfDestructCountdowns(prev => {
+                        const next = { ...prev };
+                        delete next[data.messageId];
+                        return next;
+                    });
+                } else {
+                    setSelfDestructCountdowns(prev => ({ ...prev, [data.messageId]: remaining }));
                 }
-            }
-        });
-    }, [chatMessages, activeChat, user]);
+            }, 1000);
+
+            // Actually delete from local state after delay
+            setTimeout(() => {
+                setBurningIds(prev => { const n = new Set(prev); n.add(data.messageId); return n; });
+                setTimeout(() => {
+                    useStore.getState().deleteMessageLocal(data.messageId);
+                    setBurningIds(prev => { const n = new Set(prev); n.delete(data.messageId); return n; });
+                }, 1500); // Wait for burn animation
+            }, data.delay);
+        };
+
+        const socket = socketService.getSocket();
+        if (socket) socket.on('message:burn', handleSelfDestruct);
+        
+        return () => {
+            if (socket) socket.off('message:burn', handleSelfDestruct);
+        };
+    }, []);
 
     // Link preview helpers
     const getYoutubeId = (url: string) => {
@@ -413,13 +468,34 @@ export const ChatWindow: React.FC = () => {
     const handleContextMenu = (e: React.MouseEvent, message: Message) => {
         e.preventDefault();
         e.stopPropagation();
+        // On mobile — use bottom sheet instead
+        if (isMobile()) {
+            setBottomSheet({ message });
+            return;
+        }
         const MENU_W = 190;
-        const MENU_H = 170; // approx: 4 items × ~42px
+        const MENU_H = 170;
         const vw = window.innerWidth;
         const vh = window.innerHeight;
         const x = e.clientX + MENU_W > vw ? e.clientX - MENU_W : e.clientX;
         const y = e.clientY + MENU_H > vh ? e.clientY - MENU_H : e.clientY;
         setContextMenu({ x: Math.max(8, x), y: Math.max(8, y), message });
+    };
+
+    // Long-press handlers for mobile
+    const handleTouchStart = (message: Message) => {
+        longPressTimerRef.current = setTimeout(() => {
+            // Vibrate on supported devices
+            if (navigator.vibrate) navigator.vibrate(30);
+            setBottomSheet({ message });
+        }, 500);
+    };
+
+    const handleTouchEnd = () => {
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
     };
 
     const openEmojiPicker = (e: React.MouseEvent, msgId: string, fromX?: number, fromY?: number) => {
@@ -626,9 +702,18 @@ export const ChatWindow: React.FC = () => {
                                 <span className="typing-text">{T[lang].status.typing}<span className="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>
                             ) : isContactOnline ? (
                                 <span><span className="online-dot"></span> {T[lang].status.online}</span>
-                            ) : (
-                                T[lang].status.offline
-                            )}
+                            ) : (() => {
+                                const lastSeenDate = contactUserId ? getLastSeen(contactUserId) : null;
+                                if (!lastSeenDate) return T[lang].status.offline;
+                                const diffMs = Date.now() - lastSeenDate.getTime();
+                                const diffMin = Math.floor(diffMs / 60000);
+                                const diffHour = Math.floor(diffMin / 60);
+                                const diffDay = Math.floor(diffHour / 24);
+                                if (diffMin < 1) return <span style={{color:'var(--text-secondary)'}}>был(а) только что</span>;
+                                if (diffMin < 60) return <span style={{color:'var(--text-secondary)'}}>был(а) {diffMin} мин. назад</span>;
+                                if (diffHour < 24) return <span style={{color:'var(--text-secondary)'}}>был(а) {diffHour} ч. назад</span>;
+                                return <span style={{color:'var(--text-secondary)'}}>был(а) {diffDay} дн. назад</span>;
+                            })()}
                         </div>
                     </div>
                     <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
@@ -748,8 +833,12 @@ export const ChatWindow: React.FC = () => {
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>
                                     </div>
                                     <div
+<<<<<<< HEAD
                                         className={`message ${isOwn ? 'outgoing' : 'incoming'} ${msg.type === 'sticker' ? 'sticker-only' : ''} ${searchMode && searchQuery && msg.content.toLowerCase().includes(searchQuery.toLowerCase()) ? 'message-highlight' : ''} ${burningIds.has(msg.id) ? 'burning' : ''}`}
                                         style={swipeState?.id === msg.id ? { transform: `translateX(${swipeState.offset}px)` } : undefined}
+=======
+                                        className={`message ${isOwn ? 'outgoing' : 'incoming'} ${msg.type === 'sticker' ? 'sticker-only' : ''} ${searchMode && searchQuery && msg.content.toLowerCase().includes(searchQuery.toLowerCase()) ? 'message-highlight' : ''} ${msg.selfDestruct ? 'self-destruct-msg' : ''}`}
+>>>>>>> e9cb4879a3fde889f35055c0f18e7637e73b66e0
                                         onContextMenu={(e) => handleContextMenu(e, msg)}
                                         onTouchStart={(e) => {
                                             hasScrolledRef.current = false;
@@ -810,7 +899,24 @@ export const ChatWindow: React.FC = () => {
                                                 setEditingMessage({ id: msg.id, content: msg.content });
                                             }
                                         }}
+                                        onTouchStart={() => handleTouchStart(msg)}
+                                        onTouchEnd={handleTouchEnd}
+                                        onTouchMove={handleTouchEnd}
                                     >
+                                        {/* Self-destruct countdown badge */}
+                                        {selfDestructCountdowns[msg.id] !== undefined && (
+                                            <div style={{
+                                                position: 'absolute', top: -10, right: isOwn ? 0 : 'auto', left: isOwn ? 'auto' : 0,
+                                                background: 'linear-gradient(135deg, #ff4b2b, #ff7043)',
+                                                color: '#fff', fontSize: '10px', fontWeight: 700,
+                                                padding: '2px 7px', borderRadius: '10px',
+                                                boxShadow: '0 0 8px rgba(255,75,43,0.7)',
+                                                zIndex: 2, letterSpacing: '0.3px',
+                                                animation: selfDestructCountdowns[msg.id] <= 2 ? 'pulse 0.5s ease infinite' : undefined
+                                            }}>
+                                                🔥 {selfDestructCountdowns[msg.id]}s
+                                            </div>
+                                        )}
                                         {msg.replyTo && (repliedMsg || msg.replyContent) && (
                                             <div className="reply-preview">
                                                 <div className="reply-preview-sender">
@@ -1063,6 +1169,86 @@ export const ChatWindow: React.FC = () => {
                     </div>
                 )}
 
+                {/* Mobile Bottom Sheet context menu */}
+                {bottomSheet && (
+                    <>
+                        {/* Backdrop */}
+                        <div
+                            onClick={() => setBottomSheet(null)}
+                            style={{
+                                position: 'fixed', inset: 0,
+                                background: 'rgba(0,0,0,0.5)',
+                                backdropFilter: 'blur(4px)',
+                                zIndex: 9998,
+                                animation: 'fadeIn 0.15s ease'
+                            }}
+                        />
+                        {/* Sheet */}
+                        <div
+                            onClick={e => e.stopPropagation()}
+                            style={{
+                                position: 'fixed', bottom: 0, left: 0, right: 0,
+                                background: 'var(--glass-bg)',
+                                backdropFilter: 'blur(24px)',
+                                borderTop: '1px solid rgba(255,255,255,0.12)',
+                                borderRadius: '24px 24px 0 0',
+                                zIndex: 9999,
+                                padding: '12px 0 calc(env(safe-area-inset-bottom) + 8px)',
+                                boxShadow: '0 -8px 40px rgba(0,0,0,0.4)',
+                                animation: 'slideUp 0.25s cubic-bezier(0.32, 0.72, 0, 1)'
+                            }}
+                        >
+                            {/* Handle */}
+                            <div style={{ width: 40, height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, margin: '0 auto 16px' }} />
+
+                            {/* Message preview */}
+                            <div style={{ padding: '0 20px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '4px' }}>
+                                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Сообщение</div>
+                                <div style={{ fontSize: '14px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {bottomSheet.message.type === 'image' ? '📷 Фото'
+                                        : bottomSheet.message.type === 'audio' ? '🎵 Голосовое'
+                                        : bottomSheet.message.type === 'video' ? '🎬 Видео'
+                                        : bottomSheet.message.type === 'file' ? '📎 Файл'
+                                        : bottomSheet.message.content.slice(0, 60)}
+                                </div>
+                            </div>
+
+                            {/* Actions */}
+                            {[
+                                { icon: '↩️', label: 'Ответить', action: () => { setReplyTo(bottomSheet.message); setBottomSheet(null); } },
+                                ...(bottomSheet.message.senderId === user?.id && bottomSheet.message.type === 'text'
+                                    ? [{ icon: '✏️', label: 'Редактировать', action: () => { setEditingMessage({ id: bottomSheet.message.id, content: bottomSheet.message.content }); setBottomSheet(null); } }]
+                                    : []),
+                                { icon: '➡️', label: 'Переслать', action: () => { setForwardMessage(bottomSheet.message); setBottomSheet(null); } },
+                                { icon: '😊', label: 'Реакция', action: () => { const m = bottomSheet.message; setBottomSheet(null); setTimeout(() => { const el = document.getElementById(`msg-${m.id}`); if (el) { const rect = el.getBoundingClientRect(); setEmojiPickerPos({ x: Math.min(rect.left, window.innerWidth - 240), y: Math.max(8, rect.top - 64) }); setEmojiPickerFor(m.id); } }, 50); } },
+                                { icon: '📋', label: 'Копировать', action: () => { navigator.clipboard.writeText(bottomSheet.message.content); setBottomSheet(null); } },
+                                { icon: '📌', label: T[lang].chat.pin, action: () => { pinMessage(activeChat!.id, bottomSheet.message); setBottomSheet(null); } },
+                                { icon: '🗑️', label: 'Удалить', danger: true, action: () => { socketService.deleteMessage(activeChat!.id, bottomSheet.message.id, user!.id); setBottomSheet(null); } },
+                            ].map((item: any, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={item.action}
+                                    style={{
+                                        width: '100%', padding: '14px 20px',
+                                        background: 'none', border: 'none',
+                                        color: item.danger ? '#ff4757' : 'var(--text-primary)',
+                                        cursor: 'pointer', display: 'flex',
+                                        alignItems: 'center', gap: '14px',
+                                        fontSize: '15px', fontWeight: 500,
+                                        transition: 'background 0.15s',
+                                        textAlign: 'left'
+                                    }}
+                                    onTouchStart={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                                    onTouchEnd={e => (e.currentTarget.style.background = 'none')}
+                                >
+                                    <span style={{ fontSize: '20px', width: 28, textAlign: 'center' }}>{item.icon}</span>
+                                    {item.label}
+                                </button>
+                            ))}
+                        </div>
+                    </>
+                )}
+
                 {/* Input area */}
                 <div className="message-input-container" style={{ flexDirection: 'column', alignItems: 'stretch', position: 'relative' }}>
 
@@ -1180,18 +1366,58 @@ export const ChatWindow: React.FC = () => {
                         </button>
 
                         {/* Mic / Send */}
-                        {!isRecording && (
-                            <button className="input-action-btn" title="Голосовое" onClick={startRecording}
-                                style={{ display: inputValue || imagePreview ? 'none' : 'flex' }}>
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                            </button>
-                        )}
-                        <button className="send-btn" onClick={handleSend}
-                            disabled={!inputValue.trim() && !imagePreview} title="Отправить"
+                        <button
+                            className="send-btn"
+                            onClick={handleSend}
+                            disabled={!inputValue.trim() && !imagePreview}
                             style={{ display: inputValue || imagePreview ? 'flex' : 'none' }}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                         </button>
+
+                        <button
+                            className="input-action-btn"
+                            style={{ display: !inputValue.trim() && !imagePreview ? 'flex' : 'none' }}
+                            onClick={startRecording}
+                            title="Голосовое сообщение"
+                        >
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                <line x1="12" y1="19" x2="12" y2="23"></line>
+                                <line x1="8" y1="23" x2="16" y2="23"></line>
+                            </svg>
+                        </button>
                     </div>
+
+                    {/* Premium Audio Recording Bar */}
+                    {isRecording && (
+                        <div className="recording-bar">
+                            <div className="recording-dot"></div>
+                            <div style={{ marginRight: '12px', fontWeight: 600, fontSize: '14px', minWidth: '40px' }}>
+                                {formatRecordingTime(recordingTime)}
+                            </div>
+
+                            <div className="recording-wave">
+                                <div className="wave-bar" style={{ animation: 'waveBar1 0.8s infinite' }}></div>
+                                <div className="wave-bar" style={{ animation: 'waveBar2 0.8s infinite 0.2s' }}></div>
+                                <div className="wave-bar" style={{ animation: 'waveBar3 0.8s infinite 0.4s' }}></div>
+                                <div className="wave-bar" style={{ animation: 'waveBar1 0.8s infinite 0.1s' }}></div>
+                                <div className="wave-bar" style={{ animation: 'waveBar2 0.8s infinite 0.3s' }}></div>
+                                <div className="wave-bar" style={{ animation: 'waveBar4 0.8s infinite 0.5s' }}></div>
+                                <div className="wave-bar" style={{ animation: 'waveBar3 0.8s infinite 0.2s' }}></div>
+                                <div className="wave-bar" style={{ animation: 'waveBar1 0.8s infinite 0.6s' }}></div>
+                            </div>
+
+                            <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
+                                <button className="rec-btn rec-btn-stop" onClick={() => stopRecording(false)} title="Отмена">
+                                    ✕
+                                </button>
+                                <button className="rec-btn rec-btn-send" onClick={() => stopRecording(true)} title="Отправить">
+                                    🚀
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Sticker panel — inside container so position:absolute works */}
                     {showStickers && (

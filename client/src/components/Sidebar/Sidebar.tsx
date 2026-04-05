@@ -17,6 +17,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
     const [chatContextMenu, setChatContextMenu] = useState<{ x: number, y: number, chat: Chat } | null>(null);
     const touchTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasScrolledRef = React.useRef(false);
+    const [chatBottomSheet, setChatBottomSheet] = useState<{ chat: Chat } | null>(null);
+    const longPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isMobile = () => window.innerWidth <= 768 || ('ontouchstart' in window);
 
     // Close context menu on outside click
     React.useEffect(() => {
@@ -132,8 +135,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                     const touch = e.touches[0];
                                     touchTimeoutRef.current = setTimeout(() => {
                                         if (hasScrolledRef.current) return;
-                                        setChatContextMenu({ x: touch.clientX, y: Math.min(touch.clientY, window.innerHeight - 200), chat });
-                                        if (navigator.vibrate) navigator.vibrate(50);
+                                        if (navigator.vibrate) navigator.vibrate(30);
+                                        if (isMobile()) {
+                                            setChatBottomSheet({ chat });
+                                        } else {
+                                            setChatContextMenu({ x: touch.clientX, y: Math.min(touch.clientY, window.innerHeight - 200), chat });
+                                        }
                                     }, 400); // 400ms long press
                                 }}
                                 onTouchMove={() => {
@@ -149,6 +156,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                 onContextMenu={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();
+                                    if (isMobile()) {
+                                        setChatBottomSheet({ chat });
+                                        return;
+                                    }
                                     const cx = e.clientX;
                                     const cy = e.clientY;
                                     const MENU_W = 180; const MENU_H = 60;
@@ -232,6 +243,58 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                         Удалить чат
                     </button>
                 </div>
+            )}
+
+            {/* Mobile bottom sheet for chat actions */}
+            {chatBottomSheet && (
+                <>
+                    <div
+                        onClick={() => setChatBottomSheet(null)}
+                        style={{
+                            position: 'fixed', inset: 0,
+                            background: 'rgba(0,0,0,0.5)',
+                            backdropFilter: 'blur(4px)',
+                            zIndex: 9998,
+                            animation: 'fadeIn 0.15s ease'
+                        }}
+                    />
+                    <div
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                            position: 'fixed', bottom: 0, left: 0, right: 0,
+                            background: 'var(--glass-bg)',
+                            backdropFilter: 'blur(24px)',
+                            borderTop: '1px solid rgba(255,255,255,0.12)',
+                            borderRadius: '24px 24px 0 0',
+                            zIndex: 9999,
+                            padding: '12px 0 calc(env(safe-area-inset-bottom) + 16px)',
+                            boxShadow: '0 -8px 40px rgba(0,0,0,0.4)',
+                            animation: 'slideUp 0.25s cubic-bezier(0.32, 0.72, 0, 1)'
+                        }}
+                    >
+                        <div style={{ width: 40, height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, margin: '0 auto 16px' }} />
+                        <div style={{ padding: '0 20px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '4px' }}>
+                            <div style={{ fontWeight: 700, fontSize: '15px' }}>{chatBottomSheet.chat.name}</div>
+                        </div>
+                        <button
+                            onClick={() => {
+                                if (window.confirm(`Удалить чат с ${chatBottomSheet.chat.name}?`)) {
+                                    socketService.deleteChat(chatBottomSheet.chat.id);
+                                }
+                                setChatBottomSheet(null);
+                            }}
+                            style={{
+                                width: '100%', padding: '14px 20px', background: 'none',
+                                border: 'none', color: '#ff4757', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: '14px',
+                                fontSize: '15px', fontWeight: 500, textAlign: 'left'
+                            }}
+                        >
+                            <span style={{ fontSize: '20px', width: 28, textAlign: 'center' }}>🗑️</span>
+                            Удалить чат
+                        </button>
+                    </div>
+                </>
             )}
 
             {user && (

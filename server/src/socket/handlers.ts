@@ -99,17 +99,24 @@ export function setupSocketHandlers(io: Server) {
                     timestamp: new Date().toISOString()
                 };
 
+                // Always echo back to sender first (guarantees optimistic update gets confirmed)
+                socket.emit('message:new', messageData);
+
                 // Deliver to all participants via user rooms
                 const participants = await query('SELECT user_id FROM chat_participants WHERE chat_id = ?', [chatId]) as { user_id: string }[];
 
                 if (participants && participants.length > 0) {
                     participants.forEach(p => {
-                        io.to(`user:${p.user_id}`).emit('message:new', messageData);
+                        // Skip sender (already sent directly above)
+                        if (p.user_id !== senderId) {
+                            io.to(`user:${p.user_id}`).emit('message:new', messageData);
+                        }
                     });
                 }
 
-                // Also broadcast to the active chat room to catch anyone currently viewing it
+                // Also broadcast to the active chat room (catches anyone viewing who isn't in user room)
                 socket.to(`chat:${chatId}`).emit('message:new', messageData);
+
             } catch (err) {
                 console.error('Error saving message:', err);
             }
@@ -158,20 +165,43 @@ export function setupSocketHandlers(io: Server) {
             }
         });
 
-        // Message read - for self-destruct
-        socket.on('message:read', async (data: { chatId: string, messageId: string, userId: string }) => {
+        // Specific message read - for self-destruct
+        socket.on('message:read:specific', async (data: { chatId: string, messageId: string, userId: string }) => {
             const { chatId, messageId, userId } = data;
 
-            // Check if this message should self-destruct
             try {
-                // In a real app we'd check the DB, but for now we broadcast the burn event
-                // The client will handle local deletion
-                io.to(`chat:${chatId}`).emit('message:burn', { messageId, delay: 5000 });
+                // Verify if the message exists and has selfDestruct enabled
+                const msg = await get('SELECT self_destruct FROM messages WHERE id = ?', [messageId]);
+                
+                if (msg && msg.self_destruct) {
+                    const burnPayload = { messageId, delay: 5000 };
 
-                // Also delete from DB after delay
-                setTimeout(async () => {
-                    await run('DELETE FROM messages WHERE id = ?', [messageId]);
-                }, 6000);
+                    // Emit to the chat room (for anyone in the chat)
+                    io.to(`chat:${chatId}`).emit('message:burn', burnPayload);
+
+                    // Also emit to each participant via their personal user room
+                    // (ensures delivery even if they switched screens)
+                    try {
+                        const participants = await query(
+                            'SELECT user_id FROM chat_participants WHERE chat_id = ?',
+                            [chatId]
+                        ) as { user_id: string }[];
+
+                        participants.forEach(p => {
+                            io.to(`user:${p.user_id}`).emit('message:burn', burnPayload);
+                        });
+                    } catch (_) { /* ignore */ }
+
+                    // Delete from DB after the delay + small buffer
+                    setTimeout(async () => {
+                        try {
+                            await run('DELETE FROM messages WHERE id = ?', [messageId]);
+                            console.log(`🔥 Self-destruct: deleted message ${messageId}`);
+                        } catch (e) {
+                            console.error('Failed to delete self-destruct message:', e);
+                        }
+                    }, 6500);
+                }
             } catch (err) {
                 console.error('Error in self-destruct read handler:', err);
             }

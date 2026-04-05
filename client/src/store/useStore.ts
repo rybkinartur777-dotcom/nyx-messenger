@@ -17,6 +17,7 @@ interface AppState {
 
     // Online users
     onlineUsers: Set<string>;
+    lastSeen: Record<string, Date>; // userId -> last seen time
 
     // UI
     isLoading: boolean;
@@ -27,6 +28,8 @@ interface AppState {
     deletedMessageIds: Set<string>;
     pinnedMessages: Record<string, Message[]>; // chatId -> pinned messages
     toasts: ToastData[]; // In-app notifications
+    pinCode: string | null; // App access PIN
+    isLocked: boolean; // App lock status
 
     // Actions
     setUser: (user: User | null) => void;
@@ -47,6 +50,7 @@ interface AppState {
     setUserOnline: (userId: string) => void;
     setUserOffline: (userId: string) => void;
     isUserOnline: (userId: string) => boolean;
+    getLastSeen: (userId: string) => Date | null;
     addReaction: (chatId: string, messageId: string, emoji: string, userId: string) => void;
     removeReaction: (chatId: string, messageId: string, emoji: string, userId: string) => void;
     pinMessage: (chatId: string, message: Message) => void;
@@ -59,6 +63,8 @@ interface AppState {
     removeToast: (id: string) => void;
     toggleChatPin: (chatId: string) => void;
     toggleChatMute: (chatId: string) => void;
+    setPinCode: (pin: string | null) => void;
+    setLocked: (locked: boolean) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -72,6 +78,7 @@ export const useStore = create<AppState>()(
             messages: {},
             contacts: [],
             onlineUsers: new Set<string>(),
+            lastSeen: {},
             isLoading: false,
             sidebarOpen: true,
             theme: 'dark',
@@ -80,6 +87,8 @@ export const useStore = create<AppState>()(
             deletedMessageIds: new Set(),
             pinnedMessages: {},
             toasts: [],
+            pinCode: null,
+            isLocked: false,
 
             // Actions
             setUser: (user) => set({
@@ -206,11 +215,16 @@ export const useStore = create<AppState>()(
             setUserOffline: (userId) => set((state) => {
                 const newOnline = new Set(state.onlineUsers);
                 newOnline.delete(userId);
-                return { onlineUsers: newOnline };
+                const newLastSeen = { ...state.lastSeen, [userId]: new Date() };
+                return { onlineUsers: newOnline, lastSeen: newLastSeen };
             }),
 
             isUserOnline: (userId) => {
                 return get().onlineUsers.has(userId);
+            },
+
+            getLastSeen: (userId) => {
+                return get().lastSeen[userId] || null;
             },
 
             addReaction: (chatId, messageId, emoji, userId) => set((state) => ({
@@ -306,7 +320,9 @@ export const useStore = create<AppState>()(
             })),
             toggleChatMute: (chatId) => set((state) => ({
                 chats: state.chats.map(c => c.id === chatId ? { ...c, isMuted: !c.isMuted } : c)
-            }))
+            })),
+            setPinCode: (pinCode) => set({ pinCode }),
+            setLocked: (isLocked) => set({ isLocked }),
         }),
         {
             name: 'nyx-storage',
@@ -320,6 +336,7 @@ export const useStore = create<AppState>()(
                 stealthMode: state.stealthMode,
                 pinnedMessages: state.pinnedMessages,
                 deletedMessageIds: Array.from(state.deletedMessageIds), // persists as array
+                pinCode: state.pinCode,
             }),
             onRehydrateStorage: () => (state) => {
                 if (state && Array.isArray(state.deletedMessageIds)) {
