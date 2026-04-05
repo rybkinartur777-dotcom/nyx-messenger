@@ -5,7 +5,7 @@ import { T } from '../../locales';
 import { PinModal } from '../Auth/PinModal';
 
 export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-    const { user, lang, setLanguage, stealthMode, toggleStealthMode, theme, setTheme, pinCode, setPinCode, fakePinCode, setFakePinCode, panicWipe } = useStore();
+    const { user, lang, setLanguage, stealthMode, toggleStealthMode, theme, setTheme, pinCode, setPinCode, fakePinCode, setFakePinCode, panicWipe, ghostMode, toggleGhostMode } = useStore();
     const [idCopied, setIdCopied] = useState(false);
     const [activeTab, setActiveTab] = useState<'profile' | 'privacy' | 'appearance'>('profile');
     const [showPinSetter, setShowPinSetter] = useState(false);
@@ -207,6 +207,15 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                                 description={T[lang].settings.stealth_desc}
                             >
                                 <Toggle checked={stealthMode} onChange={toggleStealthMode} />
+                            </SettingsRow>
+
+                            {/* Ghost Mode */}
+                            <SettingsRow
+                                icon="👻"
+                                title="Режим «Невидимка»"
+                                description="Скрывает ваш статус «В сети» от всех пользователей"
+                            >
+                                <Toggle checked={ghostMode} onChange={toggleGhostMode} />
                             </SettingsRow>
 
                             {/* PIN Code Lock */}

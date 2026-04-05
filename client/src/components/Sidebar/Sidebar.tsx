@@ -3,18 +3,20 @@ import { useStore } from '../../store/useStore';
 import { socketService } from '../../socket/socketService';
 import { Chat } from '../../types';
 import { SettingsModal } from './SettingsModal';
+import { PinModal } from '../Auth/PinModal';
 
 interface SidebarProps {
     onAddContact: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
-    const { user, chats, activeChat, setActiveChat, sidebarOpen, toggleSidebar, logout, onlineUsers, isFakeMode, addToast } = useStore();
+    const { user, chats, activeChat, setActiveChat, sidebarOpen, toggleSidebar, logout, onlineUsers, isFakeMode, addToast, lockedChatIds, setChatLock } = useStore();
     const [chatSearch, setChatSearch] = useState('');
     const [confirmLogout, setConfirmLogout] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [idCopied, setIdCopied] = useState(false);
     const [chatContextMenu, setChatContextMenu] = useState<{ x: number, y: number, chat: Chat } | null>(null);
+    const [showChatUnlock, setShowChatUnlock] = useState<Chat | null>(null);
     const touchTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasScrolledRef = React.useRef(false);
     const [chatBottomSheet, setChatBottomSheet] = useState<{ chat: Chat } | null>(null);
@@ -26,7 +28,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
         document.addEventListener('click', handleClick);
         return () => document.removeEventListener('click', handleClick);
     }, []);
-
 
     const formatTime = (date: Date) => {
         const now = new Date();
@@ -42,13 +43,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
         return '?';
     };
 
-    // Get the other participant in a private chat
     const getContactId = (chat: Chat) => {
         if (chat.type !== 'private') return null;
         return chat.participants.find(p => p !== user?.id) || null;
     };
 
-    // Filter and sort chats by search and latest message
     const sortedChats = isFakeMode ? [] : [...chats].sort((a, b) => {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
@@ -119,13 +118,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                     <div className="empty-chat-list">
                         <div className="speech-bubble-icon">💬</div>
                         <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>
-                            {chatSearch ? 'Чаты не найдены' : 'Список чатов пуст. Самое время начать общение!'}
+                            {chatSearch ? 'Чаты не найдены' : 'Список чатов пуст.'}
                         </p>
-                        {!chatSearch && (
-                            <button className="create-chat-btn-large add-contact-btn" onClick={handleAddContactClick}>
-                                ✨ Создать чат
-                            </button>
-                        )}
                     </div>
                 ) : (
                     filteredChats.map((chat) => {
@@ -137,31 +131,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                 key={chat.id}
                                 className={`chat-item ${activeChat?.id === chat.id ? 'active' : ''}`}
                                 onClick={() => {
-                                    setActiveChat(chat);
-                                    if (window.innerWidth <= 768) toggleSidebar();
-                                }}
-                                onTouchStart={(e) => {
-                                    hasScrolledRef.current = false;
-                                    const touch = e.touches[0];
-                                    touchTimeoutRef.current = setTimeout(() => {
-                                        if (hasScrolledRef.current) return;
-                                        if (navigator.vibrate) navigator.vibrate(30);
-                                        if (isMobile()) {
-                                            setChatBottomSheet({ chat });
-                                        } else {
-                                            setChatContextMenu({ x: touch.clientX, y: Math.min(touch.clientY, window.innerHeight - 200), chat });
-                                        }
-                                    }, 400); // 400ms long press
-                                }}
-                                onTouchMove={() => {
-                                    hasScrolledRef.current = true;
-                                    if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
-                                }}
-                                onTouchEnd={() => {
-                                    if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
-                                }}
-                                onTouchCancel={() => {
-                                    if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
+                                    if (lockedChatIds[chat.id]) {
+                                        setShowChatUnlock(chat);
+                                    } else {
+                                        setActiveChat(chat);
+                                        if (window.innerWidth <= 768) toggleSidebar();
+                                    }
                                 }}
                                 onContextMenu={(e) => {
                                     e.preventDefault();
@@ -170,13 +145,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                         setChatBottomSheet({ chat });
                                         return;
                                     }
-                                    const cx = e.clientX;
-                                    const cy = e.clientY;
-                                    const MENU_W = 180; const MENU_H = 60;
-                                    let x = cx; let y = cy;
-                                    if (x + MENU_W > window.innerWidth) x = window.innerWidth - MENU_W - 8;
-                                    if (y + MENU_H > window.innerHeight) y = window.innerHeight - MENU_H - 8;
-                                    setChatContextMenu({ x, y, chat });
+                                    setChatContextMenu({ x: e.clientX, y: e.clientY, chat });
                                 }}
                             >
                                 <div className="avatar-wrapper">
@@ -235,151 +204,81 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                     }}>
                         {chatContextMenu.chat.isMuted ? '🔔 Включить звук' : '🔕 Без звука'}
                     </button>
+                    <button className="context-menu-item" onClick={() => {
+                        const isLocked = lockedChatIds[chatContextMenu.chat.id];
+                        if (isLocked) {
+                            setChatLock(chatContextMenu.chat.id, null);
+                        } else {
+                            const pwd = window.prompt('Введите новый пароль для этого чата:');
+                            if (pwd) setChatLock(chatContextMenu.chat.id, pwd);
+                        }
+                        setChatContextMenu(null);
+                    }}>
+                        {lockedChatIds[chatContextMenu.chat.id] ? '🔓 Разблокировать чат' : '🔒 Заблокировать чат'}
+                    </button>
                     <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', margin: '4px 0' }} />
                     <button className="context-menu-item danger" onClick={() => {
                         setChatContextMenu(null);
-                        // Trigger delete custom logic
-                        if (window.confirm(`Вы уверены, что хотите удалить чат с ${chatContextMenu.chat.name || 'Неизвестный'}? Это полностью удалит переписку у обоих.`)) {
+                        if (window.confirm(`Удалить чат с ${chatContextMenu.chat.name}?`)) {
                             socketService.deleteChat(chatContextMenu.chat.id);
-                            if (activeChat?.id === chatContextMenu.chat.id) {
-                                setActiveChat(null);
-                            }
                         }
                     }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '8px' }}>
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
                         Удалить чат
                     </button>
+                </div>
+            )}
+
+            {user && (
+                <div className="sidebar-footer" style={{ padding: '12px 14px', borderTop: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                            {user.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', borderRadius: '12px', objectFit: 'cover' }} /> : user.nickname[0]?.toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.nickname}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => navigator.clipboard.writeText(user.id)}>{user.id.slice(0, 8)}...</div>
+                        </div>
+                        <button onClick={() => setShowSettings(true)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>⚙️</button>
+                        <button onClick={() => logout()} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer' }}>🚪</button>
+                    </div>
+                </div>
+            )}
+
+            <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
+
+            {showChatUnlock && (
+                <div style={{ position: 'fixed', inset: 0, zIndex: 1000000 }}>
+                    <PinModal 
+                        mode="unlock" 
+                        onSuccess={() => {
+                            setActiveChat(showChatUnlock);
+                            setShowChatUnlock(null);
+                            if (window.innerWidth <= 768) toggleSidebar();
+                        }} 
+                        onCancel={() => setShowChatUnlock(null)}
+                        onPinSet={(pin: string) => {
+                            if (pin === lockedChatIds[showChatUnlock.id]) {
+                                setActiveChat(showChatUnlock);
+                                setShowChatUnlock(null);
+                                if (window.innerWidth <= 768) toggleSidebar();
+                            } else {
+                                alert('Неверный пароль чата');
+                            }
+                        }}
+                    />
                 </div>
             )}
 
             {/* Mobile bottom sheet for chat actions */}
             {chatBottomSheet && (
                 <>
-                    <div
-                        onClick={() => setChatBottomSheet(null)}
-                        style={{
-                            position: 'fixed', inset: 0,
-                            background: 'rgba(0,0,0,0.5)',
-                            backdropFilter: 'blur(4px)',
-                            zIndex: 9998,
-                            animation: 'fadeIn 0.15s ease'
-                        }}
-                    />
-                    <div
-                        onClick={e => e.stopPropagation()}
-                        style={{
-                            position: 'fixed', bottom: 0, left: 0, right: 0,
-                            background: 'var(--glass-bg)',
-                            backdropFilter: 'blur(24px)',
-                            borderTop: '1px solid rgba(255,255,255,0.12)',
-                            borderRadius: '24px 24px 0 0',
-                            zIndex: 9999,
-                            padding: '12px 0 calc(env(safe-area-inset-bottom) + 16px)',
-                            boxShadow: '0 -8px 40px rgba(0,0,0,0.4)',
-                            animation: 'slideUp 0.25s cubic-bezier(0.32, 0.72, 0, 1)'
-                        }}
-                    >
-                        <div style={{ width: 40, height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, margin: '0 auto 16px' }} />
-                        <div style={{ padding: '0 20px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '4px' }}>
-                            <div style={{ fontWeight: 700, fontSize: '15px' }}>{chatBottomSheet.chat.name}</div>
-                        </div>
-                        <button
-                            onClick={() => {
-                                if (window.confirm(`Удалить чат с ${chatBottomSheet.chat.name}?`)) {
-                                    socketService.deleteChat(chatBottomSheet.chat.id);
-                                }
-                                setChatBottomSheet(null);
-                            }}
-                            style={{
-                                width: '100%', padding: '14px 20px', background: 'none',
-                                border: 'none', color: '#ff4757', cursor: 'pointer',
-                                display: 'flex', alignItems: 'center', gap: '14px',
-                                fontSize: '15px', fontWeight: 500, textAlign: 'left'
-                            }}
-                        >
-                            <span style={{ fontSize: '20px', width: 28, textAlign: 'center' }}>🗑️</span>
-                            Удалить чат
-                        </button>
+                    <div onClick={() => setChatBottomSheet(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9998 }} />
+                    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--bg-primary)', borderRadius: '20px 20px 0 0', zIndex: 9999, padding: '20px' }}>
+                        <button onClick={() => { socketService.deleteChat(chatBottomSheet.chat.id); setChatBottomSheet(null); }} style={{ width: '100%', padding: '15px', color: '#ff4757', background: 'none', border: 'none', textAlign: 'left', fontSize: '16px' }}>Удалить чат</button>
+                        <button onClick={() => setChatBottomSheet(null)} style={{ width: '100%', padding: '15px', background: 'none', border: 'none', textAlign: 'left', fontSize: '16px' }}>Отмена</button>
                     </div>
                 </>
             )}
-
-            {user && (
-                <div style={{
-                    padding: '12px 14px',
-                    borderTop: '1px solid var(--border-color)',
-                    background: 'linear-gradient(0deg, var(--bg-hover) 0%, transparent 100%)',
-                }}>
-                    {confirmLogout ? (
-                        <div style={{ padding: '10px 12px', background: 'rgba(255,71,87,0.08)', border: '1px solid rgba(255,71,87,0.2)', borderRadius: '14px' }}>
-                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '10px', textAlign: 'center' }}>
-                                🚪 Выйти из аккаунта?
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                <button onClick={() => setConfirmLogout(false)} style={{ flex: 1, padding: '8px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px' }}>
-                                    Отмена
-                                </button>
-                                <button onClick={() => { localStorage.removeItem('nyx_private_key'); localStorage.removeItem('nyx-storage'); logout(); window.location.reload(); }} style={{ flex: 1, padding: '8px', background: 'rgba(255,71,87,0.2)', border: '1px solid rgba(255,71,87,0.4)', borderRadius: '10px', color: '#ff4757', cursor: 'pointer', fontSize: '13px', fontWeight: 700 }}>
-                                    Выйти
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            {/* Avatar */}
-                            <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '16px', flexShrink: 0, overflow: 'hidden', boxShadow: '0 0 12px var(--accent-glow)', color: '#fff' }}>
-                                {user.avatar
-                                    ? <img src={user.avatar} alt={user.nickname} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    : user.nickname[0]?.toUpperCase()
-                                }
-                            </div>
-
-                            {/* Name + ID */}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {user.nickname}
-                                </div>
-                                <div
-                                    onClick={() => { navigator.clipboard.writeText(user.id); setIdCopied(true); setTimeout(() => setIdCopied(false), 2000); }}
-                                    style={{ fontSize: '11px', color: idCopied ? 'var(--success)' : 'var(--text-secondary)', fontFamily: 'monospace', cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', transition: 'color 0.2s', letterSpacing: '0.5px' }}
-                                    title="Нажмите чтобы скопировать ID"
-                                >
-                                    {idCopied ? '✅ Скопировано!' : user.id}
-                                </div>
-                            </div>
-
-                            {/* Action buttons */}
-                            <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                                <button
-                                    onClick={() => setShowSettings(true)}
-                                    title="Настройки"
-                                    style={{ width: 34, height: 34, borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', fontSize: '16px' }}
-                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-active)'; (e.currentTarget as HTMLElement).style.color = 'var(--accent-secondary)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 0 10px var(--accent-glow)'; }}
-                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)'; (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
-                                >
-                                    ⚙️
-                                </button>
-                                <button
-                                    onClick={() => setConfirmLogout(true)}
-                                    title="Выход"
-                                    style={{ width: 34, height: 34, borderRadius: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', fontSize: '16px' }}
-                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,71,87,0.15)'; (e.currentTarget as HTMLElement).style.color = 'var(--danger)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 0 10px rgba(255,71,87,0.3)'; }}
-                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)'; (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
-                                >
-                                    🚪
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
         </div>
     );
 };
-
-

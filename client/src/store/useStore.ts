@@ -33,6 +33,7 @@ interface AppState {
     isLocked: boolean; // App lock status
     isFakeMode: boolean; // True if logged in via fake PIN
     ghostMode: boolean; // Hide online presence from others
+    lockedChatIds: Record<string, string>; // chatId -> specific chat password
 
     // Actions
     setUser: (user: User | null) => void;
@@ -72,6 +73,7 @@ interface AppState {
     setFakeMode: (isFake: boolean) => void;
     panicWipe: () => void;
     toggleGhostMode: () => void;
+    setChatLock: (chatId: string, password: string | null) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -99,6 +101,7 @@ export const useStore = create<AppState>()(
             isLocked: false,
             isFakeMode: false,
             ghostMode: false,
+            lockedChatIds: {},
 
             // Actions
             setUser: (user) => set({
@@ -375,6 +378,15 @@ export const useStore = create<AppState>()(
                     }
                 }).catch(() => {});
             },
+            setChatLock: (chatId, password) => set(state => {
+                const newLocks = { ...state.lockedChatIds };
+                if (password) {
+                    newLocks[chatId] = password;
+                } else {
+                    delete newLocks[chatId];
+                }
+                return { lockedChatIds: newLocks };
+            }),
         }),
         {
             name: 'nyx-storage',
@@ -391,6 +403,7 @@ export const useStore = create<AppState>()(
                 pinCode: state.pinCode,
                 fakePinCode: state.fakePinCode,
                 ghostMode: state.ghostMode,
+                lockedChatIds: state.lockedChatIds,
                 isFakeMode: false // Never persist fake mode being active
             }),
             onRehydrateStorage: () => (state) => {
