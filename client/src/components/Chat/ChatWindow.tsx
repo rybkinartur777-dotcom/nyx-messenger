@@ -15,7 +15,7 @@ const STICKERS = ['😂', '❤️', '🔥', '👍', '💀', '🤡', '😭', '�
 export const ChatWindow: React.FC = () => {
     const {
         activeChat, user, messages, chats, setMessages, markMessagesAsRead, onlineUsers,
-        pinMessage, unpinMessage, pinnedMessages, lang, deleteMessageLocal, toggleSidebar,
+        pinMessage, unpinMessage, pinnedMessages, lang, toggleSidebar,
         stealthMode, setActiveChat, getLastSeen
     } = useStore();
     const [inputValue, setInputValue] = useState('');
@@ -57,10 +57,8 @@ export const ChatWindow: React.FC = () => {
     const [swipeState, setSwipeState] = useState<{ id: string, offset: number } | null>(null);
     const touchStartXRef = useRef<number | null>(null);
     const touchStartYRef = useRef<number | null>(null);
-    const burningTimersRef = useRef<Set<string>>(new Set());
     
-    // Bottom sheet & long press for mobile
-    const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Bottom sheet for mobile
     const isMobile = () => window.innerWidth <= 768 || ('ontouchstart' in window);
 
     const chatMessages = activeChat ? messages[activeChat.id] || [] : [];
@@ -482,21 +480,6 @@ export const ChatWindow: React.FC = () => {
         setContextMenu({ x: Math.max(8, x), y: Math.max(8, y), message });
     };
 
-    // Long-press handlers for mobile
-    const handleTouchStart = (message: Message) => {
-        longPressTimerRef.current = setTimeout(() => {
-            // Vibrate on supported devices
-            if (navigator.vibrate) navigator.vibrate(30);
-            setBottomSheet({ message });
-        }, 500);
-    };
-
-    const handleTouchEnd = () => {
-        if (longPressTimerRef.current) {
-            clearTimeout(longPressTimerRef.current);
-            longPressTimerRef.current = null;
-        }
-    };
 
     const openEmojiPicker = (e: React.MouseEvent, msgId: string, fromX?: number, fromY?: number) => {
         e.stopPropagation();
@@ -833,12 +816,8 @@ export const ChatWindow: React.FC = () => {
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>
                                     </div>
                                     <div
-<<<<<<< HEAD
-                                        className={`message ${isOwn ? 'outgoing' : 'incoming'} ${msg.type === 'sticker' ? 'sticker-only' : ''} ${searchMode && searchQuery && msg.content.toLowerCase().includes(searchQuery.toLowerCase()) ? 'message-highlight' : ''} ${burningIds.has(msg.id) ? 'burning' : ''}`}
+                                        className={`message ${isOwn ? 'outgoing' : 'incoming'} ${msg.type === 'sticker' ? 'sticker-only' : ''} ${searchMode && searchQuery && msg.content.toLowerCase().includes(searchQuery.toLowerCase()) ? 'message-highlight' : ''} ${msg.selfDestruct ? 'self-destruct-msg' : ''} ${burningIds.has(msg.id) ? 'burning' : ''}`}
                                         style={swipeState?.id === msg.id ? { transform: `translateX(${swipeState.offset}px)` } : undefined}
-=======
-                                        className={`message ${isOwn ? 'outgoing' : 'incoming'} ${msg.type === 'sticker' ? 'sticker-only' : ''} ${searchMode && searchQuery && msg.content.toLowerCase().includes(searchQuery.toLowerCase()) ? 'message-highlight' : ''} ${msg.selfDestruct ? 'self-destruct-msg' : ''}`}
->>>>>>> e9cb4879a3fde889f35055c0f18e7637e73b66e0
                                         onContextMenu={(e) => handleContextMenu(e, msg)}
                                         onTouchStart={(e) => {
                                             hasScrolledRef.current = false;
@@ -899,9 +878,6 @@ export const ChatWindow: React.FC = () => {
                                                 setEditingMessage({ id: msg.id, content: msg.content });
                                             }
                                         }}
-                                        onTouchStart={() => handleTouchStart(msg)}
-                                        onTouchEnd={handleTouchEnd}
-                                        onTouchMove={handleTouchEnd}
                                     >
                                         {/* Self-destruct countdown badge */}
                                         {selfDestructCountdowns[msg.id] !== undefined && (

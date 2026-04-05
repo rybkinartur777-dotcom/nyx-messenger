@@ -6,10 +6,11 @@ interface PinModalProps {
     mode: 'set' | 'unlock';
     onSuccess: () => void;
     onCancel?: () => void;
+    onPinSet?: (pin: string) => void; // Used to override default setPinCode
 }
 
-export const PinModal: React.FC<PinModalProps> = ({ mode, onSuccess, onCancel }) => {
-    const { pinCode, setPinCode, setLocked } = useStore();
+export const PinModal: React.FC<PinModalProps> = ({ mode, onSuccess, onCancel, onPinSet }) => {
+    const { pinCode, fakePinCode, setPinCode, setLocked, setFakeMode } = useStore();
     const [pin, setPin] = useState('');
     const [confirmPin, setConfirmPin] = useState('');
     const [step, setStep] = useState(1);
@@ -32,6 +33,12 @@ export const PinModal: React.FC<PinModalProps> = ({ mode, onSuccess, onCancel })
             if (mode === 'unlock') {
                 if (pin === pinCode) {
                     setLocked(false);
+                    setFakeMode(false);
+                    onSuccess();
+                } else if (fakePinCode && pin === fakePinCode) {
+                    setLocked(false);
+                    setFakeMode(true);
+                    useStore.getState().setActiveChat(null);
                     onSuccess();
                 } else {
                     setError('Неверный PIN-код');
@@ -44,7 +51,11 @@ export const PinModal: React.FC<PinModalProps> = ({ mode, onSuccess, onCancel })
                     setStep(2);
                 } else {
                     if (pin === confirmPin) {
-                        setPinCode(pin);
+                        if (onPinSet) {
+                            onPinSet(pin);
+                        } else {
+                            setPinCode(pin);
+                        }
                         onSuccess();
                     } else {
                         setError('PIN-коды не совпадают');
@@ -54,7 +65,7 @@ export const PinModal: React.FC<PinModalProps> = ({ mode, onSuccess, onCancel })
                 }
             }
         }
-    }, [pin, mode, pinCode, step, confirmPin, onSuccess, setPinCode, setLocked]);
+    }, [pin, mode, pinCode, fakePinCode, step, confirmPin, onSuccess, setPinCode, setLocked, setFakeMode, onPinSet]);
 
     const content = (
         <div style={{

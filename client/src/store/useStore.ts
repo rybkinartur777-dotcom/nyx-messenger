@@ -29,7 +29,9 @@ interface AppState {
     pinnedMessages: Record<string, Message[]>; // chatId -> pinned messages
     toasts: ToastData[]; // In-app notifications
     pinCode: string | null; // App access PIN
+    fakePinCode: string | null; // Plausible deniability PIN
     isLocked: boolean; // App lock status
+    isFakeMode: boolean; // True if logged in via fake PIN
 
     // Actions
     setUser: (user: User | null) => void;
@@ -64,7 +66,9 @@ interface AppState {
     toggleChatPin: (chatId: string) => void;
     toggleChatMute: (chatId: string) => void;
     setPinCode: (pin: string | null) => void;
+    setFakePinCode: (pin: string | null) => void;
     setLocked: (locked: boolean) => void;
+    setFakeMode: (isFake: boolean) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -88,7 +92,9 @@ export const useStore = create<AppState>()(
             pinnedMessages: {},
             toasts: [],
             pinCode: null,
+            fakePinCode: null,
             isLocked: false,
+            isFakeMode: false,
 
             // Actions
             setUser: (user) => set({
@@ -322,7 +328,9 @@ export const useStore = create<AppState>()(
                 chats: state.chats.map(c => c.id === chatId ? { ...c, isMuted: !c.isMuted } : c)
             })),
             setPinCode: (pinCode) => set({ pinCode }),
+            setFakePinCode: (fakePinCode) => set({ fakePinCode }),
             setLocked: (isLocked) => set({ isLocked }),
+            setFakeMode: (isFakeMode) => set({ isFakeMode }),
         }),
         {
             name: 'nyx-storage',
@@ -337,6 +345,8 @@ export const useStore = create<AppState>()(
                 pinnedMessages: state.pinnedMessages,
                 deletedMessageIds: Array.from(state.deletedMessageIds), // persists as array
                 pinCode: state.pinCode,
+                fakePinCode: state.fakePinCode,
+                isFakeMode: false // Never persist fake mode being active
             }),
             onRehydrateStorage: () => (state) => {
                 if (state && Array.isArray(state.deletedMessageIds)) {

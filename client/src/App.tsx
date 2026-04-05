@@ -14,7 +14,7 @@ import { setupWebPush } from './socket/pushService';
 import { PinModal } from './components/Auth/PinModal';
 
 const App: React.FC = () => {
-    const { isAuthenticated, user, setChats, chats, theme, lang, pinCode, isLocked, setLocked } = useStore();
+    const { isAuthenticated, user, setChats, chats, theme, lang, pinCode, isLocked, setLocked, isFakeMode } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [showAddContact, setShowAddContact] = useState(false);
     const [isNinjaMode, setIsNinjaMode] = useState(false);
@@ -39,9 +39,13 @@ const App: React.FC = () => {
                 }
 
                 if (user?.id) {
-                    socketService.connect(user.id);
-                    // Initialize background Web Push notifications
-                    setupWebPush(user.id);
+                    if (!isFakeMode) {
+                        socketService.connect(user.id);
+                        // Initialize background Web Push notifications
+                        setupWebPush(user.id);
+                    } else {
+                        socketService.disconnect();
+                    }
                     if (pinCode) setLocked(true);
                 }
             } catch (err) {
@@ -52,7 +56,7 @@ const App: React.FC = () => {
         };
 
         initApp();
-    }, [user, setChats]);
+    }, [user, setChats, isFakeMode]);
 
     // Ninja Mode logic
     useEffect(() => {
@@ -87,7 +91,7 @@ const App: React.FC = () => {
     }, [isNinjaMode, isAuthenticated]);
 
     useEffect(() => {
-        if (!isAuthenticated || !user?.id) return;
+        if (!isAuthenticated || !user?.id || isFakeMode) return;
 
         const fetchChats = async () => {
             try {

@@ -9,7 +9,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
-    const { user, chats, activeChat, setActiveChat, sidebarOpen, toggleSidebar, logout, onlineUsers } = useStore();
+    const { user, chats, activeChat, setActiveChat, sidebarOpen, toggleSidebar, logout, onlineUsers, isFakeMode, addToast } = useStore();
     const [chatSearch, setChatSearch] = useState('');
     const [confirmLogout, setConfirmLogout] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
@@ -18,7 +18,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
     const touchTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const hasScrolledRef = React.useRef(false);
     const [chatBottomSheet, setChatBottomSheet] = useState<{ chat: Chat } | null>(null);
-    const longPressTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const isMobile = () => window.innerWidth <= 768 || ('ontouchstart' in window);
 
     // Close context menu on outside click
@@ -50,13 +49,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
     };
 
     // Filter and sort chats by search and latest message
-    const sortedChats = [...chats].sort((a, b) => {
+    const sortedChats = isFakeMode ? [] : [...chats].sort((a, b) => {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
         const timeA = a.lastMessage?.timestamp ? new Date(a.lastMessage.timestamp).getTime() : 0;
         const timeB = b.lastMessage?.timestamp ? new Date(b.lastMessage.timestamp).getTime() : 0;
         return timeB - timeA;
     });
+
+    const handleAddContactClick = () => {
+        if (isFakeMode) {
+            addToast({
+                title: 'Нет подключения',
+                body: 'Не удалось подключиться к серверу в режиме защищенного сеанса.',
+            });
+            return;
+        }
+        onAddContact();
+    };
 
     const filteredChats = chatSearch.trim()
         ? sortedChats.filter(c => (c.name || '').toLowerCase().includes(chatSearch.toLowerCase()))
@@ -89,7 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                     </div>
                     <span className="logo-text" style={{ display: 'flex', alignItems: 'center', lineHeight: 1 }}>NYX</span>
                 </div>
-                <button className="new-chat-btn-top add-contact-btn" onClick={onAddContact} title="Создать новый чат" style={{ width: '34px', height: '34px', flexShrink: 0 }}>
+                <button className="new-chat-btn-top add-contact-btn" onClick={handleAddContactClick} title="Создать новый чат" style={{ width: '34px', height: '34px', flexShrink: 0 }}>
                     +
                 </button>
             </div>
@@ -112,7 +122,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                             {chatSearch ? 'Чаты не найдены' : 'Список чатов пуст. Самое время начать общение!'}
                         </p>
                         {!chatSearch && (
-                            <button className="create-chat-btn-large add-contact-btn" onClick={onAddContact}>
+                            <button className="create-chat-btn-large add-contact-btn" onClick={handleAddContactClick}>
                                 ✨ Создать чат
                             </button>
                         )}

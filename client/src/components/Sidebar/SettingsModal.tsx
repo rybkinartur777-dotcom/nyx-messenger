@@ -5,10 +5,11 @@ import { T } from '../../locales';
 import { PinModal } from '../Auth/PinModal';
 
 export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-    const { user, lang, setLanguage, stealthMode, toggleStealthMode, theme, setTheme, pinCode, setPinCode } = useStore();
+    const { user, lang, setLanguage, stealthMode, toggleStealthMode, theme, setTheme, pinCode, setPinCode, fakePinCode, setFakePinCode } = useStore();
     const [idCopied, setIdCopied] = useState(false);
     const [activeTab, setActiveTab] = useState<'profile' | 'privacy' | 'appearance'>('profile');
     const [showPinSetter, setShowPinSetter] = useState(false);
+    const [showFakePinSetter, setShowFakePinSetter] = useState(false);
 
     if (!isOpen || !user) return null;
 
@@ -257,6 +258,64 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                                     onSuccess={() => setShowPinSetter(false)} 
                                     onCancel={() => setShowPinSetter(false)} 
                                 />
+                            )}
+
+                            {/* Fake PIN Lock */}
+                            <SettingsRow
+                                icon="👻"
+                                title="Фантомный PIN-код"
+                                description={fakePinCode ? "Фантомный PIN установлен" : "Скрывает переписки при вводе фейкового PIN"}
+                            >
+                                <button
+                                    onClick={() => setShowFakePinSetter(true)}
+                                    style={{
+                                        background: fakePinCode ? 'rgba(0, 243, 160, 0.15)' : 'rgba(108, 92, 231, 0.15)',
+                                        border: '1px solid currentColor',
+                                        color: fakePinCode ? '#00f3a0' : '#a29bfe',
+                                        padding: '6px 14px',
+                                        borderRadius: '8px',
+                                        fontSize: '13px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {fakePinCode ? 'Изменить' : 'Установить'}
+                                </button>
+                            </SettingsRow>
+                            
+                            {fakePinCode && (
+                                <button 
+                                    onClick={() => {
+                                        if (window.confirm('Вы уверены, что хотите отключить Фантомный учетный профиль?')) {
+                                            setFakePinCode(null);
+                                        }
+                                    }}
+                                    style={{
+                                        alignSelf: 'flex-start',
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#ff4757',
+                                        fontSize: '12px',
+                                        marginTop: '-4px',
+                                        marginLeft: '16px',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Отключить
+                                </button>
+                            )}
+
+                            {showFakePinSetter && (
+                                <div style={{ position: 'fixed', zIndex: 9999999 }}>
+                                    <PinModal 
+                                        mode="set" 
+                                        onPinSet={(pin) => setFakePinCode(pin)}
+                                        onSuccess={() => {
+                                            setShowFakePinSetter(false)
+                                        }} 
+                                        onCancel={() => setShowFakePinSetter(false)} 
+                                    />
+                                </div>
                             )}
 
                             {/* E2E info */}
