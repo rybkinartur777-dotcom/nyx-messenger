@@ -10,12 +10,23 @@ router.post('/private', async (req: Request, res: Response) => {
         const { userId, contactId } = req.body;
 
         // Check if chat already exists
-        const existingChat = await get(`
-      SELECT c.id FROM chats c
-      JOIN chat_participants cp1 ON c.id = cp1.chat_id AND cp1.user_id = ?
-      JOIN chat_participants cp2 ON c.id = cp2.chat_id AND cp2.user_id = ?
-      WHERE c.type = 'private'
-    `, [userId, contactId]) as any;
+        let existingChat;
+        if (userId === contactId) {
+            existingChat = await get(`
+        SELECT c.id FROM chats c
+        JOIN chat_participants cp ON c.id = cp.chat_id
+        WHERE c.type = 'private'
+        GROUP BY c.id
+        HAVING COUNT(cp.user_id) = 1 AND MAX(cp.user_id) = ?
+      `, [userId]) as any;
+        } else {
+            existingChat = await get(`
+        SELECT c.id FROM chats c
+        JOIN chat_participants cp1 ON c.id = cp1.chat_id AND cp1.user_id = ?
+        JOIN chat_participants cp2 ON c.id = cp2.chat_id AND cp2.user_id = ?
+        WHERE c.type = 'private'
+      `, [userId, contactId]) as any;
+        }
 
         if (existingChat) {
             return res.json({
@@ -31,9 +42,16 @@ router.post('/private', async (req: Request, res: Response) => {
       INSERT INTO chats (id, type) VALUES (?, 'private')
     `, [chatId]);
 
-        await run(`
-      INSERT INTO chat_participants (chat_id, user_id) VALUES (?, ?), (?, ?)
-    `, [chatId, userId, chatId, contactId]);
+        if (userId === contactId) {
+            // Saved Messages / Secure notes
+            await run(`
+        INSERT INTO chat_participants (chat_id, user_id) VALUES (?, ?)
+      `, [chatId, userId]);
+        } else {
+            await run(`
+        INSERT INTO chat_participants (chat_id, user_id) VALUES (?, ?), (?, ?)
+      `, [chatId, userId, chatId, contactId]);
+        }
 
         res.json({
             success: true,

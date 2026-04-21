@@ -4,6 +4,7 @@ import { socketService } from '../../socket/socketService';
 import { Chat } from '../../types';
 import { SettingsModal } from './SettingsModal';
 import { PinModal } from '../Auth/PinModal';
+import { API_BASE_URL } from '../../config';
 
 interface SidebarProps {
     onAddContact: () => void;
@@ -80,6 +81,49 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
         return content.length > 35 ? content.slice(0, 35) + '...' : content;
     };
 
+    const handleCreateNotes = async () => {
+        if (!user || isFakeMode) return;
+        const notesChat = chats.find(c => c.type === 'private' && c.participants.length === 1 && c.participants[0] === user.id);
+        
+        if (notesChat) {
+            setActiveChat(notesChat);
+            if (window.innerWidth <= 768) toggleSidebar();
+            return;
+        }
+
+        try {
+            const serverUrl = API_BASE_URL.replace(/\/$/, '');
+            const response = await fetch(`${serverUrl}/api/chats/private`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.id, contactId: user.id })
+            });
+            const result = await response.json();
+            if (result.success && result.data.chatId) {
+                const serverChatId = result.data.chatId;
+                const newChat: Chat = {
+                    id: serverChatId, type: 'private',
+                    participants: [user.id],
+                    name: 'Избранное',
+                    unreadCount: 0, createdAt: new Date()
+                };
+                
+                const existingInStore = chats.find(c => c.id === serverChatId);
+                if (existingInStore) { 
+                    setActiveChat(existingInStore); 
+                } else { 
+                    useStore.getState().setChats([...chats, newChat]); 
+                    setActiveChat(newChat); 
+                }
+                
+                socketService.joinChat(serverChatId);
+                if (window.innerWidth <= 768) toggleSidebar();
+            }
+        } catch (err) {
+            console.error('Failed to create notes chat', err);
+        }
+    };
+
     return (
         <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
             <div className="sidebar-header">
@@ -95,9 +139,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                     </div>
                     <span className="logo-text" style={{ display: 'flex', alignItems: 'center', lineHeight: 1 }}>NYX</span>
                 </div>
-                <button className="new-chat-btn-top add-contact-btn" onClick={handleAddContactClick} title="Создать новый чат" style={{ width: '34px', height: '34px', flexShrink: 0 }}>
-                    +
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="new-chat-btn-top add-contact-btn" onClick={handleCreateNotes} title="Избранное (Заметки)" style={{ width: '34px', height: '34px', flexShrink: 0, fontSize: '18px', background: 'rgba(255,255,255,0.05)' }}>
+                        🔖
+                    </button>
+                    <button className="new-chat-btn-top add-contact-btn" onClick={handleAddContactClick} title="Создать новый чат" style={{ width: '34px', height: '34px', flexShrink: 0 }}>
+                        +
+                    </button>
+                </div>
             </div>
 
             <div className="search-container">
@@ -122,6 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                     filteredChats.map((chat) => {
                         const contactId = getContactId(chat);
                         const isOnline = contactId ? onlineUsers.has(contactId) : false;
+                        const isSelfChat = chat.type === 'private' && chat.participants.length === 1 && chat.participants[0] === user?.id;
 
                         return (
                             <div
@@ -146,8 +196,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                 }}
                             >
                                 <div className="avatar-wrapper">
-                                    <div className="avatar" style={chat.avatar ? { padding: 0, overflow: 'hidden' } : {}}>
-                                        {chat.avatar ? (
+                                    <div className="avatar" style={chat.avatar && !isSelfChat ? { padding: 0, overflow: 'hidden' } : {}}>
+                                        {isSelfChat ? (
+                                            '🔖'
+                                        ) : chat.avatar ? (
                                             <img src={chat.avatar} alt={chat.name || 'Chat'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         ) : (
                                             getAvatarLetter(chat)
@@ -159,7 +211,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                 <div className="chat-info">
                                     <div className="chat-name">
                                         {chat.isMuted && <span style={{ marginRight: '4px', fontSize: '11px', color: 'var(--text-secondary)' }}>🔕</span>}
-                                        {chat.name || 'Неизвестный'}
+                                        {isSelfChat ? 'Избранное' : (chat.name || 'Неизвестный')}
                                     </div>
                                     <div className="chat-preview">{getLastMessagePreview(chat)}</div>
                                 </div>

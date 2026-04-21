@@ -756,34 +756,45 @@ export const ChatWindow: React.FC = () => {
                             <line x1="3" y1="18" x2="21" y2="18"></line>
                         </svg>
                     </button>
-                    <div className="avatar" style={{ width: '44px', height: '44px', overflow: 'hidden', padding: activeChat.avatar ? 0 : undefined }}>
-                        {activeChat.avatar ? (
-                            <img src={activeChat.avatar} alt={activeChat.name || 'Chat'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                            activeChat.name?.[0]?.toUpperCase() || '?'
-                        )}
-                    </div>
-                    <div className="chat-header-info">
-                        <div className="chat-header-name">{activeChat.name || T[lang].sidebar.unknown}</div>
-                        <div className={`chat-header-status ${isContactOnline ? 'online' : ''}`}>
-                            {isTyping ? (
-                                <span className="typing-text">{T[lang].status.typing}<span className="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>
-                            ) : isContactOnline ? (
-                                <span><span className="online-dot"></span> {T[lang].status.online}</span>
-                            ) : (() => {
-                                const lastSeenDate = contactUserId ? getLastSeen(contactUserId) : null;
-                                if (!lastSeenDate) return T[lang].status.offline;
-                                const diffMs = Date.now() - lastSeenDate.getTime();
-                                const diffMin = Math.floor(diffMs / 60000);
-                                const diffHour = Math.floor(diffMin / 60);
-                                const diffDay = Math.floor(diffHour / 24);
-                                if (diffMin < 1) return <span style={{color:'var(--text-secondary)'}}>был(а) только что</span>;
-                                if (diffMin < 60) return <span style={{color:'var(--text-secondary)'}}>был(а) {diffMin} мин. назад</span>;
-                                if (diffHour < 24) return <span style={{color:'var(--text-secondary)'}}>был(а) {diffHour} ч. назад</span>;
-                                return <span style={{color:'var(--text-secondary)'}}>был(а) {diffDay} дн. назад</span>;
-                            })()}
-                        </div>
-                    </div>
+                    {(() => {
+                        const isSelfChat = activeChat.type === 'private' && activeChat.participants.length === 1 && activeChat.participants[0] === user?.id;
+                        return (
+                            <>
+                                <div className="avatar" style={{ width: '44px', height: '44px', overflow: 'hidden', padding: activeChat.avatar && !isSelfChat ? 0 : undefined, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
+                                    {isSelfChat ? (
+                                        '🔖'
+                                    ) : activeChat.avatar ? (
+                                        <img src={activeChat.avatar} alt={activeChat.name || 'Chat'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : (
+                                        activeChat.name?.[0]?.toUpperCase() || '?'
+                                    )}
+                                </div>
+                                <div className="chat-header-info">
+                                    <div className="chat-header-name">{isSelfChat ? 'Избранное' : (activeChat.name || T[lang].sidebar.unknown)}</div>
+                                    <div className={`chat-header-status ${isContactOnline ? 'online' : ''}`}>
+                                        {isSelfChat ? (
+                                            <span style={{ color: 'var(--text-secondary)' }}>Заметки</span>
+                                        ) : isTyping ? (
+                                            <span className="typing-text">{T[lang].status.typing}<span className="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>
+                                        ) : isContactOnline ? (
+                                            <span><span className="online-dot"></span> {T[lang].status.online}</span>
+                                        ) : (() => {
+                                            const lastSeenDate = contactUserId ? getLastSeen(contactUserId) : null;
+                                            if (!lastSeenDate) return T[lang].status.offline;
+                                            const diffMs = Date.now() - lastSeenDate.getTime();
+                                            const diffMin = Math.floor(diffMs / 60000);
+                                            const diffHour = Math.floor(diffMin / 60);
+                                            const diffDay = Math.floor(diffHour / 24);
+                                            if (diffMin < 1) return <span style={{ color: 'var(--text-secondary)' }}>был(а) только что</span>;
+                                            if (diffMin < 60) return <span style={{ color: 'var(--text-secondary)' }}>был(а) {diffMin} мин. назад</span>;
+                                            if (diffHour < 24) return <span style={{ color: 'var(--text-secondary)' }}>был(а) {diffHour} ч. назад</span>;
+                                            return <span style={{ color: 'var(--text-secondary)' }}>был(а) {diffDay} дн. назад</span>;
+                                        })()}
+                                    </div>
+                                </div>
+                            </>
+                        );
+                    })()}
                     <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
                         <button
                             className={`btn btn-ghost ${searchMode ? 'active' : ''}`}
