@@ -9,7 +9,11 @@ import { Message } from '../../types';
 import AudioPlayer from './AudioPlayer';
 import { EncryptionInfoModal } from './EncryptionInfoModal';
 
-const EMOJI_LIST = ['❤️', '👍', '😂', '😮', '😢', '🔥', '💯', '👀'];
+const EMOJI_LIST = [
+    '❤️', '👍', '😂', '😮', '😢', '🔥', '💯', '👀',
+    '🎉', '😍', '🤣', '😅', '🤔', '😡', '🥺', '💪',
+    '🙏', '✅', '💀', '🤯', '😎', '🫶',
+];
 const STICKERS = ['😂', '❤️', '🔥', '👍', '💀', '🤡', '😭', '🥺', '🗿', '☕', '🐱', '🐶', '😎', '🎉', '🧠', '🤬', '💩', '👽', '👾', '🤖', '👑', '🤌'];
 
 export const ChatWindow: React.FC = () => {
@@ -220,6 +224,57 @@ export const ChatWindow: React.FC = () => {
     const formatTime = (date: Date) => {
         return new Date(date).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     };
+
+    const formatDateSeparator = (date: Date): string => {
+        const d = new Date(date);
+        const now = new Date();
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+
+        if (d.toDateString() === now.toDateString()) return 'Сегодня';
+        if (d.toDateString() === yesterday.toDateString()) return 'Вчера';
+
+        return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+    };
+
+    const shouldShowDateSeparator = (messages: typeof displayMessages, index: number): boolean => {
+        if (index === 0) return true;
+        const prev = new Date(messages[index - 1].timestamp);
+        const curr = new Date(messages[index].timestamp);
+        return prev.toDateString() !== curr.toDateString();
+    };
+
+    // Message status icon helper
+    const MessageStatusIcon: React.FC<{ status: string }> = ({ status }) => {
+        if (status === 'sending') {
+            return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ opacity: 0.45 }}><circle cx="12" cy="12" r="10" /></svg>;
+        }
+        if (status === 'sent') {
+            return (
+                <svg width="14" height="10" viewBox="0 0 14 10" fill="none" style={{ opacity: 0.55 }}>
+                    <polyline points="1,5 4.5,8.5 13,1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            );
+        }
+        if (status === 'delivered') {
+            return (
+                <svg width="18" height="10" viewBox="0 0 18 10" fill="none" style={{ opacity: 0.55 }}>
+                    <polyline points="1,5 4.5,8.5 13,1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    <polyline points="5,5 8.5,8.5 17,1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            );
+        }
+        if (status === 'read') {
+            return (
+                <svg width="18" height="10" viewBox="0 0 18 10" fill="none">
+                    <polyline points="1,5 4.5,8.5 13,1" stroke="#4fc3f7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    <polyline points="5,5 8.5,8.5 17,1" stroke="#4fc3f7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            );
+        }
+        return null;
+    };
+
 
     // Drag & Drop handlers
     const handleDragOver = (e: React.DragEvent) => {
@@ -875,14 +930,38 @@ export const ChatWindow: React.FC = () => {
                             </div>
                         </div>
                     ) : (
-                        displayMessages.map((msg) => {
+                        displayMessages.map((msg, msgIndex) => {
                             const isOwn = msg.senderId === user?.id;
                             const reactionGroups = getReactionGroups(msg.reactions);
                             const repliedMsg = msg.replyTo ? getReplyMessage(msg.replyTo) : null;
+                            const showSeparator = shouldShowDateSeparator(displayMessages, msgIndex);
 
                             return (
+                                <React.Fragment key={msg.id}>
+                                {/* Date separator */}
+                                {showSeparator && (
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', gap: '12px',
+                                        margin: '12px 16px',
+                                        userSelect: 'none'
+                                    }}>
+                                        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+                                        <div style={{
+                                            fontSize: '11px', fontWeight: 600,
+                                            color: 'var(--text-muted)',
+                                            background: 'rgba(255,255,255,0.04)',
+                                            border: '1px solid rgba(255,255,255,0.07)',
+                                            padding: '3px 12px',
+                                            borderRadius: '12px',
+                                            letterSpacing: '0.3px',
+                                            whiteSpace: 'nowrap'
+                                        }}>
+                                            {formatDateSeparator(msg.timestamp)}
+                                        </div>
+                                        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+                                    </div>
+                                )}
                                 <div
-                                    key={msg.id}
                                     id={`msg-${msg.id}`}
                                     className={`msg-wrapper ${isOwn ? 'outgoing' : 'incoming'} ${swipeState?.id === msg.id ? 'swiping' : ''}`}
                                 >
@@ -1086,11 +1165,19 @@ export const ChatWindow: React.FC = () => {
 
                                         {/* Time + status */}
                                         <div className="message-time">
-                                            {(msg as any).edited && <span style={{ fontSize: '10px', opacity: 0.6, marginRight: '4px' }}>✏</span>}
+                                            {msg.edited && (
+                                                <span style={{
+                                                    fontSize: '10px',
+                                                    opacity: 0.55,
+                                                    marginRight: '5px',
+                                                    fontStyle: 'italic',
+                                                    letterSpacing: '0.2px'
+                                                }}>изм.</span>
+                                            )}
                                             {formatTime(msg.timestamp)}
                                             {isOwn && (
-                                                <span className={`read-status ${msg.status === 'read' ? 'read' : ''}`}>
-                                                    {msg.status === 'read' ? '✓✓' : '✓'}
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', marginLeft: '4px', verticalAlign: 'middle' }}>
+                                                    <MessageStatusIcon status={msg.status} />
                                                 </span>
                                             )}
                                         </div>
@@ -1141,6 +1228,7 @@ export const ChatWindow: React.FC = () => {
                                         </div>
                                     )}
                                 </div>
+                                </React.Fragment>
                             );
                         })
                     )}
@@ -1495,7 +1583,20 @@ export const ChatWindow: React.FC = () => {
 
             {/* Fixed emoji picker */}
             {emojiPickerFor && emojiPickerPos && (
-                <div className="emoji-picker-float" style={{ top: emojiPickerPos!.y, left: emojiPickerPos!.x }} onClick={e => e.stopPropagation()}>
+                <div
+                    className="emoji-picker-float"
+                    style={{
+                        top: emojiPickerPos!.y,
+                        left: emojiPickerPos!.x,
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(6, 1fr)',
+                        gap: '2px',
+                        padding: '8px',
+                        borderRadius: '14px',
+                        minWidth: '220px',
+                    }}
+                    onClick={e => e.stopPropagation()}
+                >
                     {EMOJI_LIST.map(emoji => (
                         <button key={emoji} className="emoji-btn" onClick={() => handleReaction(emojiPickerFor!, emoji)}>{emoji}</button>
                     ))}

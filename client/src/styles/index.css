@@ -1970,12 +1970,10 @@ textarea {
 }
 
 .read-status {
-    font-size: 11px;
-    color: var(--text-muted);
-}
-
-.read-status.read {
-    color: var(--secondary);
+    display: inline-flex;
+    align-items: center;
+    margin-left: 2px;
+    vertical-align: middle;
 }
 
 /* Hover actions on message */
@@ -2343,14 +2341,17 @@ textarea {
     position: fixed;
     background: var(--glass-bg);
     backdrop-filter: var(--glass-blur-heavy);
+    -webkit-backdrop-filter: var(--glass-blur-heavy);
     border: 1px solid var(--glass-border);
-    border-radius: var(--radius-xl);
-    padding: 10px 14px;
-    display: flex;
-    gap: 6px;
-    box-shadow: var(--shadow-lg);
-    z-index: 9000;
-    animation: slideUp 0.15s ease;
+    border-radius: 16px;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 2px;
+    box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255,255,255,0.04);
+    z-index: 9500;
+    animation: slideUp 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    min-width: 224px;
 }
 
 .emoji-btn {

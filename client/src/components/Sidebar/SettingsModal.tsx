@@ -1,17 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { useStore } from '../../store/useStore';
 import { T } from '../../locales';
 import { PinModal } from '../Auth/PinModal';
+import { API_BASE_URL } from '../../config';
 
 export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-    const { user, lang, setLanguage, stealthMode, toggleStealthMode, theme, setTheme, pinCode, setPinCode, fakePinCode, setFakePinCode, panicWipe, ghostMode, toggleGhostMode, screenSecurity, toggleScreenSecurity } = useStore();
+    const { user, lang, setLanguage, stealthMode, toggleStealthMode, theme, setTheme, pinCode, setPinCode, fakePinCode, setFakePinCode, panicWipe, ghostMode, toggleGhostMode, screenSecurity, toggleScreenSecurity, setUser } = useStore();
     const [idCopied, setIdCopied] = useState(false);
     const [activeTab, setActiveTab] = useState<'profile' | 'privacy' | 'appearance'>('profile');
     const [showPinSetter, setShowPinSetter] = useState(false);
     const [showFakePinSetter, setShowFakePinSetter] = useState(false);
-    const [panicStep, setPanicStep] = useState(0); // 0 = idle, 1 = confirm shown
+    const [panicStep, setPanicStep] = useState(0);
     const panicHoldTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Profile editing
+    const [editingNickname, setEditingNickname] = useState(false);
+    const [newNickname, setNewNickname] = useState('');
+    const [nicknameError, setNicknameError] = useState('');
+    const [nicknameLoading, setNicknameLoading] = useState(false);
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+    const [avatarLoading, setAvatarLoading] = useState(false);
 
     if (!isOpen || !user) return null;
 
@@ -114,15 +122,22 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             {/* Avatar + Name */}
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                                <div style={{
-                                    width: 80, height: 80,
-                                    borderRadius: '50%',
-                                    overflow: 'hidden',
-                                    border: '3px solid rgba(108, 92, 231, 0.5)',
-                                    boxShadow: '0 0 20px rgba(108, 92, 231, 0.3)'
-                                }}>
+                                {/* Avatar with edit overlay */}
+                                <div
+                                    style={{
+                                        width: 80, height: 80,
+                                        borderRadius: '50%',
+                                        overflow: 'hidden',
+                                        border: '3px solid rgba(108, 92, 231, 0.5)',
+                                        boxShadow: '0 0 20px rgba(108, 92, 231, 0.3)',
+                                        position: 'relative',
+                                        cursor: 'pointer'
+                                    }}
+                                    onClick={() => avatarInputRef.current?.click()}
+                                    title="Изменить аватар"
+                                >
                                     {user.avatar
-                                        ? <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ? <img src={user.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="avatar" />
                                         : <div style={{
                                             width: '100%', height: '100%',
                                             background: 'linear-gradient(135deg, #6c5ce7, #a29bfe)',
@@ -130,9 +145,121 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                                             fontSize: '2rem', fontWeight: 700
                                         }}>{user.nickname[0].toUpperCase()}</div>
                                     }
+                                    {/* Hover overlay */}
+                                    <div style={{
+                                        position: 'absolute', inset: 0,
+                                        background: 'rgba(0,0,0,0.45)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        opacity: avatarLoading ? 1 : 0,
+                                        transition: 'opacity 0.2s',
+                                        fontSize: avatarLoading ? '12px' : '20px'
+                                    }}
+                                    onMouseEnter={e => { if (!avatarLoading) (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+                                    onMouseLeave={e => { if (!avatarLoading) (e.currentTarget as HTMLElement).style.opacity = '0'; }}
+                                    >
+                                        {avatarLoading ? '...' : '📷'}
+                                    </div>
+                                    <input
+                                        ref={avatarInputRef}
+                                        type="file" accept="image/*"
+                                        style={{ display: 'none' }}
+                                        onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file || !user) return;
+                                            setAvatarLoading(true);
+                                            try {
+                                                const reader = new FileReader();
+                                                reader.onload = async () => {
+                                                    const base64 = reader.result as string;
+                                                    const serverUrl = API_BASE_URL.replace(/\/$/, '');
+                                                    const res = await fetch(`${serverUrl}/api/users/${user.id}`, {
+                                                        method: 'PATCH',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ avatar: base64 })
+                                                    });
+                                                    const result = await res.json();
+                                                    if (result.success) {
+                                                        setUser({ ...user, avatar: base64 });
+                                                    }
+                                                    setAvatarLoading(false);
+                                                };
+                                                reader.readAsDataURL(file);
+                                            } catch {
+                                                setAvatarLoading(false);
+                                            }
+                                            if (avatarInputRef.current) avatarInputRef.current.value = '';
+                                        }}
+                                    />
                                 </div>
+
                                 <div style={{ textAlign: 'center' }}>
-                                    <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{user.nickname}</div>
+                                    {/* Nickname inline editor */}
+                                    {editingNickname ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                            <input
+                                                autoFocus
+                                                value={newNickname}
+                                                onChange={e => { setNewNickname(e.target.value); setNicknameError(''); }}
+                                                onKeyDown={async e => {
+                                                    if (e.key === 'Escape') { setEditingNickname(false); setNicknameError(''); }
+                                                }}
+                                                maxLength={32}
+                                                style={{
+                                                    background: 'rgba(255,255,255,0.07)',
+                                                    border: `1px solid ${nicknameError ? '#ff4757' : 'rgba(108,92,231,0.5)'}`,
+                                                    borderRadius: '10px',
+                                                    color: '#fff',
+                                                    padding: '8px 14px',
+                                                    fontSize: '1.1rem',
+                                                    fontWeight: 700,
+                                                    textAlign: 'center',
+                                                    outline: 'none',
+                                                    width: '200px'
+                                                }}
+                                            />
+                                            {nicknameError && <div style={{ fontSize: '11px', color: '#ff4757' }}>{nicknameError}</div>}
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button
+                                                    onClick={() => { setEditingNickname(false); setNicknameError(''); }}
+                                                    style={{ padding: '6px 14px', background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '8px', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px' }}
+                                                >Отмена</button>
+                                                <button
+                                                    disabled={nicknameLoading || !newNickname.trim()}
+                                                    onClick={async () => {
+                                                        const trimmed = newNickname.trim();
+                                                        if (!trimmed || trimmed.length < 2) { setNicknameError('Мин. 2 символа'); return; }
+                                                        setNicknameLoading(true);
+                                                        try {
+                                                            const serverUrl = API_BASE_URL.replace(/\/$/, '');
+                                                            const res = await fetch(`${serverUrl}/api/users/${user.id}`, {
+                                                                method: 'PATCH',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({ nickname: trimmed })
+                                                            });
+                                                            const result = await res.json();
+                                                            if (result.success) {
+                                                                setUser({ ...user, nickname: trimmed });
+                                                                setEditingNickname(false);
+                                                            } else {
+                                                                setNicknameError(result.error === 'Nickname already taken' ? 'Никнейм уже занят' : result.error || 'Ошибка');
+                                                            }
+                                                        } catch { setNicknameError('Ошибка сети'); }
+                                                        setNicknameLoading(false);
+                                                    }}
+                                                    style={{ padding: '6px 14px', background: nicknameLoading ? 'rgba(108,92,231,0.3)' : '#6c5ce7', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}
+                                                >{nicknameLoading ? '...' : 'Сохранить'}</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                                            <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{user.nickname}</div>
+                                            <button
+                                                onClick={() => { setNewNickname(user.nickname); setEditingNickname(true); setNicknameError(''); }}
+                                                title="Изменить никнейм"
+                                                style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: '6px', width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', color: 'var(--text-secondary)' }}
+                                            >✏️</button>
+                                        </div>
+                                    )}
                                     <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
                                         {T[lang].settings.anonymous_user}
                                     </div>

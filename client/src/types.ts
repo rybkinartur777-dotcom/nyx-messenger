@@ -35,6 +35,7 @@ export interface Message {
     expiresAt?: Date;
     reactions?: Reaction[];
     selfDestruct?: boolean;
+    edited?: boolean;
 }
 
 // Toast Notification
