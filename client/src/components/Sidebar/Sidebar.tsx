@@ -127,7 +127,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
     return (
         <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
             <div className="sidebar-header">
-                <button className="btn btn-ghost mobile-only" onClick={toggleSidebar} style={{ padding: '8px', display: 'flex' }}>
+                <button className="btn btn-ghost mobile-only" onClick={toggleSidebar} style={{ padding: '8px' }}>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-secondary)' }}>
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
