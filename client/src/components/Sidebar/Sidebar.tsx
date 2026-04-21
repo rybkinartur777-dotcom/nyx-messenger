@@ -139,9 +139,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                     </div>
                     <span className="logo-text" style={{ display: 'flex', alignItems: 'center', lineHeight: 1 }}>NYX</span>
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="new-chat-btn-top add-contact-btn" onClick={handleCreateNotes} title="Избранное (Заметки)" style={{ width: '34px', height: '34px', flexShrink: 0, fontSize: '18px', background: 'rgba(255,255,255,0.05)' }}>
-                        🔖
+                <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                    <button className="btn btn-ghost" onClick={handleCreateNotes} title="Избранное (Заметки)" style={{ width: '34px', height: '34px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-secondary)' }}>
+                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                        </svg>
                     </button>
                     <button className="new-chat-btn-top add-contact-btn" onClick={handleAddContactClick} title="Создать новый чат" style={{ width: '34px', height: '34px', flexShrink: 0 }}>
                         +
@@ -196,9 +198,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                 }}
                             >
                                 <div className="avatar-wrapper">
-                                    <div className="avatar" style={chat.avatar && !isSelfChat ? { padding: 0, overflow: 'hidden' } : {}}>
+                                    <div className="avatar" style={{
+                                        ...(chat.avatar && !isSelfChat ? { padding: 0, overflow: 'hidden' } : {}),
+                                        ...(isSelfChat ? { background: 'linear-gradient(135deg, #6c5ce7, #5c4ce7)' } : {})
+                                    }}>
                                         {isSelfChat ? (
-                                            '🔖'
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#fff' }}>
+                                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                                            </svg>
                                         ) : chat.avatar ? (
                                             <img src={chat.avatar} alt={chat.name || 'Chat'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         ) : (

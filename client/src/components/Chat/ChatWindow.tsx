@@ -760,9 +760,16 @@ export const ChatWindow: React.FC = () => {
                         const isSelfChat = activeChat.type === 'private' && activeChat.participants.length === 1 && activeChat.participants[0] === user?.id;
                         return (
                             <>
-                                <div className="avatar" style={{ width: '44px', height: '44px', overflow: 'hidden', padding: activeChat.avatar && !isSelfChat ? 0 : undefined, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>
+                                <div className="avatar" style={{ 
+                                    width: '44px', height: '44px', overflow: 'hidden', 
+                                    padding: activeChat.avatar && !isSelfChat ? 0 : undefined, 
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                    ...(isSelfChat ? { background: 'linear-gradient(135deg, #6c5ce7, #5c4ce7)' } : {})
+                                }}>
                                     {isSelfChat ? (
-                                        '🔖'
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#fff' }}>
+                                            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                                        </svg>
                                     ) : activeChat.avatar ? (
                                         <img src={activeChat.avatar} alt={activeChat.name || 'Chat'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     ) : (
