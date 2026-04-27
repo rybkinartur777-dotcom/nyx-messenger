@@ -1478,7 +1478,7 @@ export const ChatWindow: React.FC = () => {
                             onChange={handleInputChange}
                             onKeyPress={handleKeyPress}
                             rows={1}
-                            style={{ display: isRecording ? 'none' : undefined }}
+                            style={{ display: isRecording ? 'none' : undefined, resize: 'none' }}
                         />
 
                         {/* 🔥 Self-destruct toggle */}
