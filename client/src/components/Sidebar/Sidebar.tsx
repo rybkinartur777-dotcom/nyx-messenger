@@ -20,6 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
     const [showChatUnlock, setShowChatUnlock] = useState<Chat | null>(null);
     const [chatBottomSheet, setChatBottomSheet] = useState<{ chat: Chat } | null>(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const [copiedId, setCopiedId] = useState(false);
     const isMobile = () => window.innerWidth <= 768 || ('ontouchstart' in window);
 
     useEffect(() => {
@@ -74,6 +75,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
             return;
         }
         onAddContact();
+    };
+
+    const handleCopyId = () => {
+        if (!user) return;
+        navigator.clipboard.writeText(user.id);
+        setCopiedId(true);
+        setTimeout(() => setCopiedId(false), 2000);
     };
 
     const filteredChats = sortedChats.filter(c => {
@@ -363,7 +371,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
                                     <div style={{ fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{user.nickname}</div>
-                                    <div title="Копировать ID" style={{ fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => { navigator.clipboard.writeText(user.id); addToast({ title: 'Скопировано', body: 'ID скопирован в буфер обмена' }); }}>{user.id.slice(0, 8)}...</div>
+                                    <div 
+                                        title="Копировать ID" 
+                                        style={{ 
+                                            fontSize: '11px', 
+                                            color: copiedId ? 'var(--success)' : 'var(--text-secondary)', 
+                                            background: copiedId ? 'rgba(6, 214, 160, 0.15)' : 'transparent',
+                                            padding: copiedId ? '2px 6px' : '0',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.3s ease',
+                                            display: 'inline-block',
+                                            fontWeight: copiedId ? 600 : 400
+                                        }} 
+                                        onClick={handleCopyId}
+                                    >
+                                        {copiedId ? 'Скопировано!' : `${user.id.slice(0, 8)}...`}
+                                    </div>
                                 </div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
