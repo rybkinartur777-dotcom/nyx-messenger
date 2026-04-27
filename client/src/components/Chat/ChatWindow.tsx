@@ -636,8 +636,8 @@ export const ChatWindow: React.FC = () => {
 
     if (!activeChat) {
         return (
-            <div className="main-chat">
-                <div className="chat-header mobile-only">
+            <div className="main-chat" style={{ alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                <div className="chat-header mobile-only" style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
                     <button className="btn btn-ghost" onClick={toggleSidebar} style={{ padding: '8px', display: 'flex' }}>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-secondary)' }}>
                             <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -652,53 +652,39 @@ export const ChatWindow: React.FC = () => {
                         <div className="logo-text" style={{ fontSize: '1.2rem' }}>Nyx</div>
                     </div>
                 </div>
-                <div className="empty-state">
-                    <div className="empty-state-card">
-                        {/* Security lock icon — top of card */}
-                        <div className="secure-lock-icon">
-                            <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                    <linearGradient id="lockGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stopColor="#7c6aff" />
-                                        <stop offset="100%" stopColor="#00f3ff" />
-                                    </linearGradient>
-                                </defs>
-                                {/* Shield body */}
-                                <path d="M26 4L8 11v12c0 10.5 7.7 20.3 18 23 10.3-2.7 18-12.5 18-23V11L26 4z"
-                                    fill="url(#lockGrad)" fillOpacity="0.15"
-                                    stroke="url(#lockGrad)" strokeWidth="1.5" />
-                                {/* Lock body */}
-                                <rect x="18" y="24" width="16" height="12" rx="3"
-                                    fill="url(#lockGrad)" fillOpacity="0.5"
-                                    stroke="url(#lockGrad)" strokeWidth="1.2" />
-                                {/* Lock shackle */}
-                                <path d="M20 24v-4a6 6 0 0 1 12 0v4"
-                                    stroke="url(#lockGrad)" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-                                {/* Keyhole */}
-                                <circle cx="26" cy="30" r="2" fill="white" fillOpacity="0.8" />
-                                <rect x="25" y="30" width="2" height="3" rx="1" fill="white" fillOpacity="0.8" />
-                            </svg>
-                        </div>
+                
+                <div className="empty-state-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', background: 'transparent', boxShadow: 'none', border: 'none' }}>
+                    <div className="secure-lock-icon" style={{ width: '120px', height: '120px', marginBottom: 0 }}>
+                        <img src="/logo.png" alt="Nyx" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '32px', filter: 'drop-shadow(0 0 24px rgba(124, 92, 252, 0.4))' }} />
+                    </div>
 
-                        <div className="empty-state-title">{T[lang].chat.select_chat}</div>
-                        <div className="empty-state-subtitle">{T[lang].chat.or_create_new}</div>
+                    <div style={{ textAlign: 'center' }}>
+                        <h2 style={{ fontSize: '28px', fontWeight: 800, marginBottom: '8px', background: 'linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.6) 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                            Nyx Messenger
+                        </h2>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '15px', maxWidth: '300px', margin: '0 auto', lineHeight: 1.6 }}>
+                            Выбирайте чат слева или создайте новый, чтобы начать общение.
+                        </p>
+                    </div>
 
-                        <div className="how-it-works-card">
-                            <h3>{T[lang].chat.how_it_works}</h3>
-                            <ol>
-                                <li>{T[lang].chat.step_1}</li>
-                                <li>{T[lang].chat.step_2}</li>
-                                <li>{T[lang].chat.step_3}</li>
-                            </ol>
-                        </div>
-
-                        <button className="start-chat-btn" onClick={() => (document.querySelector('.add-contact-btn') as HTMLButtonElement)?.click()}>
-                            {T[lang].chat.start_chat}
-                        </button>
-
-                        <div className="e2e-badge">
-                            🔐 {T[lang].chat.e2e_badge}
-                        </div>
+                    <button 
+                        onClick={() => (document.querySelector('.add-contact-btn') as HTMLButtonElement)?.click()}
+                        style={{ 
+                            background: 'var(--bg-active)', border: '1px solid var(--border-active)', 
+                            color: 'var(--primary-light)', padding: '12px 24px', borderRadius: 'var(--radius-full)',
+                            fontSize: '15px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s ease',
+                            display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px'
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-active-deep)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-active)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                    >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                        Написать сообщение
+                    </button>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)', marginTop: '20px' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        End-to-End Encryption
                     </div>
                 </div>
             </div>

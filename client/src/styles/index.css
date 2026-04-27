@@ -1,45 +1,82 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-    --primary: #7c6aff;
-    --primary-glow: rgba(124, 106, 255, 0.35);
-    --primary-dim: rgba(124, 106, 255, 0.15);
-    --secondary: #00f3ff;
-    --secondary-glow: rgba(0, 243, 255, 0.25);
-    --accent: #ff6b9d;
-    --success: #4ade80;
-    --warning: #fbbf24;
-    --danger: #f87171;
-    --bg-base: #07070f;
-    --bg-elevated: rgba(255, 255, 255, 0.04);
-    --bg-surface: rgba(255, 255, 255, 0.06);
-    --bg-tertiary: rgba(255, 255, 255, 0.08);
-    --bg-hover: rgba(255, 255, 255, 0.1);
-    --bg-active: rgba(124, 106, 255, 0.18);
-    --text-primary: rgba(255, 255, 255, 0.95);
-    --text-secondary: rgba(255, 255, 255, 0.55);
-    --text-muted: rgba(255, 255, 255, 0.3);
-    --border: rgba(255, 255, 255, 0.09);
-    --border-active: rgba(124, 106, 255, 0.5);
-    --border-glow: rgba(0, 243, 255, 0.3);
-    --glass-bg: rgba(10, 8, 25, 0.65);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --glass-blur: blur(24px);
-    --glass-blur-heavy: blur(40px);
+    /* === COSMIC MIDNIGHT PALETTE === */
+    --primary:         #7c5cfc;
+    --primary-light:   #a07ffe;
+    --primary-glow:    rgba(124, 92, 252, 0.4);
+    --primary-dim:     rgba(124, 92, 252, 0.12);
+    --secondary:       #06d6f5;
+    --secondary-glow:  rgba(6, 214, 245, 0.25);
+    --accent:          #f43f8b;
+    --accent-glow:     rgba(244, 63, 139, 0.3);
+    --success:         #22d3a4;
+    --success-glow:    rgba(34, 211, 164, 0.35);
+    --warning:         #f59e0b;
+    --danger:          #f43f5e;
+    --danger-glow:     rgba(244, 63, 94, 0.3);
+
+    /* === BACKGROUNDS === */
+    --bg-base:         #0c0b16;
+    --bg-elevated:     rgba(255, 255, 255, 0.03);
+    --bg-surface:      rgba(255, 255, 255, 0.055);
+    --bg-tertiary:     rgba(255, 255, 255, 0.075);
+    --bg-hover:        rgba(255, 255, 255, 0.09);
+    --bg-active:       rgba(124, 92, 252, 0.2);
+    --bg-active-deep:  rgba(124, 92, 252, 0.3);
+
+    /* === TEXT === */
+    --text-primary:    rgba(255, 255, 255, 0.94);
+    --text-secondary:  rgba(255, 255, 255, 0.52);
+    --text-muted:      rgba(255, 255, 255, 0.28);
+
+    /* === BORDERS === */
+    --border:          rgba(255, 255, 255, 0.08);
+    --border-active:   rgba(124, 92, 252, 0.55);
+    --border-glow:     rgba(6, 214, 245, 0.3);
+    --border-hover:    rgba(255, 255, 255, 0.14);
+
+    /* === GLASS === */
+    --glass-bg:          rgba(12, 11, 22, 0.72);
+    --glass-sidebar:     rgba(10, 9, 19, 0.9);
+    --glass-border:      rgba(255, 255, 255, 0.09);
+    --glass-blur:        blur(28px);
+    --glass-blur-heavy:  blur(48px);
+
+    /* === LAYOUT === */
     --sidebar-width: 300px;
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.7);
-    --shadow-glow: 0 0 20px var(--primary-glow);
-    --radius-sm: 6px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
-    --radius-xl: 24px;
+
+    /* === SHADOWS === */
+    --shadow-sm:    0 2px 8px rgba(0, 0, 0, 0.45);
+    --shadow-md:    0 8px 28px rgba(0, 0, 0, 0.55);
+    --shadow-lg:    0 24px 72px rgba(0, 0, 0, 0.75);
+    --shadow-glow:  0 0 24px var(--primary-glow);
+    --shadow-glow-sm: 0 0 12px var(--primary-glow);
+
+    /* === RADIUS === */
+    --radius-xs:   4px;
+    --radius-sm:   8px;
+    --radius-md:   12px;
+    --radius-lg:   16px;
+    --radius-xl:   22px;
+    --radius-2xl:  28px;
     --radius-full: 9999px;
-    --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    --font-base: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+    /* === TRANSITIONS === */
+    --transition:        0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow:   0.32s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* === TYPOGRAPHY === */
+    --font-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+    /* === BACKWARD COMPAT ALIASES === */
+    --accent-primary:   #7c5cfc;
+    --accent-secondary: #06d6f5;
+    --bg-primary:       #0c0b16;
+    --bg-secondary:     rgba(12, 11, 22, 0.72);
+    --border-color:     rgba(255, 255, 255, 0.08);
 }
 
 *,
@@ -63,12 +100,14 @@ body {
 
 body {
     font-family: var(--font-base);
-    font-weight: 500;
+    font-weight: 400;
     font-size: 15px;
     line-height: 1.5;
     color: var(--text-primary);
     background: var(--bg-base);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
 input,
@@ -212,6 +251,38 @@ textarea {
     50% { height: 24px; }
 }
 
+/* === NEW NYX 2.0 ANIMATIONS === */
+
+@keyframes onlinePulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 var(--success-glow), 0 0 8px var(--success-glow);
+    }
+    50% {
+        box-shadow: 0 0 0 4px rgba(34, 211, 164, 0), 0 0 16px var(--success-glow);
+    }
+}
+
+@keyframes shimmer {
+    0%   { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+}
+
+@keyframes badgePop {
+    0%   { transform: scale(0); opacity: 0; }
+    60%  { transform: scale(1.25); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes chatSlideIn {
+    from { opacity: 0; transform: translateX(-12px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes filterTabIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
 .stars-container {
     position: fixed;
     inset: 0;
@@ -301,11 +372,12 @@ textarea {
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
+    background: var(--glass-sidebar);
+    backdrop-filter: var(--glass-blur-heavy);
+    -webkit-backdrop-filter: var(--glass-blur-heavy);
     border-right: 1px solid var(--glass-border);
     flex-shrink: 0;
+    box-shadow: 2px 0 32px rgba(0,0,0,0.5);
 }
 
 .sidebar-header {
@@ -387,6 +459,48 @@ textarea {
     background: var(--bg-hover);
 }
 
+.sidebar-filters {
+    display: flex;
+    gap: 4px;
+    padding: 0 16px 8px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+}
+
+.sidebar-filters::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
+}
+
+.filter-tab {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--transition);
+    animation: filterTabIn 0.3s ease backwards;
+}
+
+.filter-tab:nth-child(1) { animation-delay: 0.05s; }
+.filter-tab:nth-child(2) { animation-delay: 0.1s; }
+.filter-tab:nth-child(3) { animation-delay: 0.15s; }
+
+.filter-tab:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.filter-tab.active {
+    background: var(--bg-active);
+    color: var(--primary-light);
+    box-shadow: inset 0 0 0 1px var(--primary-dim);
+}
+
 .sidebar-chats {
     flex: 1;
     overflow-y: auto;
@@ -413,26 +527,37 @@ textarea {
 .chat-item {
     display: flex;
     align-items: center;
-    padding: 12px 16px;
+    padding: 10px 14px;
     gap: 12px;
     cursor: pointer;
-    border-bottom: 1px solid var(--border);
-    transition: all 0.2s ease;
+    transition: all var(--transition);
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
     position: relative;
     overflow: hidden;
+    border-radius: 0;
+    animation: chatSlideIn 0.35s ease-out backwards;
+}
+.chat-item::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(124, 92, 252, 0.12) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.chat-item:hover::after {
+    opacity: 1;
 }
 .chat-item:hover {
-    background: var(--bg-hover);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .chat-item.active {
-    background: rgba(124, 106, 255, 0.25);
-    /* glassmorphism deep purple tint */
-    box-shadow: inset 0 0 0 1px rgba(124, 106, 255, 0.5);
-    /* sharp inner border */
+    background: linear-gradient(90deg, rgba(124, 92, 252, 0.22) 0%, rgba(6, 214, 245, 0.06) 100%);
+    box-shadow: inset 3px 0 0 var(--primary), inset 0 0 0 1px rgba(124, 92, 252, 0.2);
 }
 
 .chat-item.active::before {
@@ -463,12 +588,13 @@ textarea {
     position: absolute;
     bottom: 1px;
     right: 1px;
-    width: 10px;
-    height: 10px;
+    width: 11px;
+    height: 11px;
     background: var(--success);
     border-radius: 50%;
     border: 2px solid var(--bg-base);
-    box-shadow: 0 0 6px rgba(74, 222, 128, 0.6);
+    box-shadow: 0 0 8px var(--success-glow), 0 0 16px var(--success-glow);
+    animation: onlinePulse 2.5s ease-in-out infinite;
 }
 
 .chat-info {
@@ -665,22 +791,54 @@ textarea {
     word-break: break-word;
     line-height: 1.5;
     font-size: 14px;
+    animation: msgAppear 0.4s var(--transition-bounce) backwards;
 }
 
 .message-wrapper:not(.own) .message-bubble {
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-bottom-left-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-bottom-left-radius: 0;
     color: var(--text-primary);
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(12px);
+}
+
+.message-wrapper:not(.own) .message-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: -7px;
+    width: 14px;
+    height: 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border-left: 1px solid rgba(255, 255, 255, 0.09);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+    border-bottom-left-radius: 8px;
+    z-index: -1;
 }
 
 .message-wrapper.own .message-bubble {
-    background: linear-gradient(135deg, rgba(124, 106, 255, 0.3) 0%, rgba(0, 243, 255, 0.15) 100%);
-    border: 1px solid rgba(124, 106, 255, 0.4);
-    border-bottom-right-radius: var(--radius-sm);
+    background: linear-gradient(135deg, rgba(124, 92, 252, 0.35) 0%, rgba(6, 214, 245, 0.12) 100%);
+    border: 1px solid rgba(124, 92, 252, 0.45);
+    border-bottom-right-radius: 0;
     color: var(--text-primary);
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px rgba(124, 92, 252, 0.15);
+}
+
+.message-wrapper.own .message-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    right: -7px;
+    width: 14px;
+    height: 14px;
+    background: linear-gradient(135deg, rgba(124, 92, 252, 0.35) 0%, rgba(6, 214, 245, 0.12) 100%);
+    border-right: 1px solid rgba(124, 92, 252, 0.45);
+    border-bottom: 1px solid rgba(124, 92, 252, 0.45);
+    clip-path: polygon(0 100%, 100% 100%, 50% 0);
+    border-bottom-right-radius: 8px;
+    z-index: -1;
 }
 
 .message-time {
@@ -792,10 +950,10 @@ textarea {
 }
 
 .send-btn {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary) 0%, #6050e0 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, #5b3fcc 100%);
     border: none;
     cursor: pointer;
     display: flex;
@@ -804,17 +962,18 @@ textarea {
     color: white;
     font-size: 16px;
     flex-shrink: 0;
-    transition: all var(--transition);
-    box-shadow: 0 0 12px var(--primary-glow);
+    transition: all var(--transition-bounce);
+    box-shadow: 0 4px 20px var(--primary-glow);
 }
 
 .send-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 20px var(--primary-glow);
+    transform: scale(1.1);
+    box-shadow: 0 6px 28px var(--primary-glow);
+    background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
 }
 
 .send-btn:active {
-    transform: scale(0.97);
+    transform: scale(0.93);
 }
 
 .send-btn:disabled {

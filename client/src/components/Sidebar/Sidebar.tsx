@@ -13,6 +13,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
     const { user, chats, activeChat, setActiveChat, sidebarOpen, toggleSidebar, logout, onlineUsers, isFakeMode, addToast, lockedChatIds, setChatLock } = useStore();
     const [chatSearch, setChatSearch] = useState('');
+    const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'private'>('all');
     const [confirmLogout, setConfirmLogout] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [chatContextMenu, setChatContextMenu] = useState<{ x: number, y: number, chat: Chat } | null>(null);
@@ -65,9 +66,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
         onAddContact();
     };
 
-    const filteredChats = chatSearch.trim()
-        ? sortedChats.filter(c => (c.name || '').toLowerCase().includes(chatSearch.toLowerCase()))
-        : sortedChats;
+    const filteredChats = sortedChats.filter(c => {
+        if (chatSearch.trim() && !(c.name || '').toLowerCase().includes(chatSearch.toLowerCase())) return false;
+        if (chatFilter === 'unread' && c.unreadCount === 0) return false;
+        if (chatFilter === 'private' && c.type !== 'private') return false;
+        return true;
+    });
 
     const getLastMessagePreview = (chat: Chat) => {
         const lm = chat.lastMessage;
@@ -160,6 +164,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                 />
             </div>
 
+            <div className="sidebar-filters">
+                <button 
+                    className={`filter-tab ${chatFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => setChatFilter('all')}
+                >
+                    Все
+                </button>
+                <button 
+                    className={`filter-tab ${chatFilter === 'unread' ? 'active' : ''}`}
+                    onClick={() => setChatFilter('unread')}
+                >
+                    Новые
+                </button>
+                <button 
+                    className={`filter-tab ${chatFilter === 'private' ? 'active' : ''}`}
+                    onClick={() => setChatFilter('private')}
+                >
+                    Личные
+                </button>
+            </div>
+
             <div className="chat-list">
                 {filteredChats.length === 0 ? (
                     <div className="empty-chat-list">
@@ -169,7 +194,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                         </p>
                     </div>
                 ) : (
-                    filteredChats.map((chat) => {
+                    filteredChats.map((chat, index) => {
                         const contactId = getContactId(chat);
                         const isOnline = contactId ? onlineUsers.has(contactId) : false;
                         const isSelfChat = chat.type === 'private' && chat.participants.length === 1 && chat.participants[0] === user?.id;
@@ -178,6 +203,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                             <div
                                 key={chat.id}
                                 className={`chat-item ${activeChat?.id === chat.id ? 'active' : ''}`}
+                                style={{ animationDelay: `${index * 0.04}s` }}
                                 onClick={() => {
                                     if (lockedChatIds[chat.id]) {
                                         setShowChatUnlock(chat);
