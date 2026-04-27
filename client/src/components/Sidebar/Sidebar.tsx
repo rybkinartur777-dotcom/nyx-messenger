@@ -356,16 +356,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                             </div>
                         </div>
                     ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%' }}>
-                            <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>
-                                {user.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', borderRadius: '12px', objectFit: 'cover' }} /> : user.nickname[0]?.toUpperCase()}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                                <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, flexShrink: 0 }}>
+                                    {user.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', borderRadius: '12px', objectFit: 'cover' }} /> : user.nickname[0]?.toUpperCase()}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
+                                    <div style={{ fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{user.nickname}</div>
+                                    <div title="Копировать ID" style={{ fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => { navigator.clipboard.writeText(user.id); alert('ID скопирован'); }}>{user.id.slice(0, 8)}...</div>
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', maxWidth: '100px' }}>
-                                <div style={{ fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{user.nickname}</div>
-                                <div title="Копировать ID" style={{ fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => { navigator.clipboard.writeText(user.id); alert('ID скопирован'); }}>{user.id.slice(0, 8)}...</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                <button onClick={() => setShowSettings(true)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '34px', height: '34px', borderRadius: '10px', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⚙️</button>
+                                <button onClick={() => setConfirmLogout(true)} style={{ background: 'rgba(255,71,87,0.1)', border: 'none', width: '34px', height: '34px', borderRadius: '10px', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🚪</button>
                             </div>
-                            <button onClick={() => setShowSettings(true)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '34px', height: '34px', borderRadius: '10px', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>⚙️</button>
-                            <button onClick={() => setConfirmLogout(true)} style={{ background: 'rgba(255,71,87,0.1)', border: 'none', width: '34px', height: '34px', borderRadius: '10px', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>🚪</button>
                         </div>
                     )}
                 </div>
