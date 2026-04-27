@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import { socketService } from '../../socket/socketService';
 import { Chat } from '../../types';
@@ -19,7 +19,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
     const [chatContextMenu, setChatContextMenu] = useState<{ x: number, y: number, chat: Chat } | null>(null);
     const [showChatUnlock, setShowChatUnlock] = useState<Chat | null>(null);
     const [chatBottomSheet, setChatBottomSheet] = useState<{ chat: Chat } | null>(null);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
     const isMobile = () => window.innerWidth <= 768 || ('ontouchstart' in window);
+
+    useEffect(() => {
+        if (chats.length > 0) {
+            setIsInitialLoad(false);
+        } else {
+            const timer = setTimeout(() => setIsInitialLoad(false), 1200);
+            return () => clearTimeout(timer);
+        }
+    }, [chats.length]);
 
     // Close context menu on outside click
     React.useEffect(() => {
@@ -199,10 +209,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                 </button>
             </div>
 
-            <div className="chat-list">
-                {filteredChats.length === 0 ? (
-                    <div className="empty-chat-list">
-                        <div className="speech-bubble-icon">💬</div>
+            <div className="sidebar-chats">
+                {isInitialLoad ? (
+                    <>
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <div key={`skeleton-${i}`} className="chat-item" style={{ pointerEvents: 'none' }}>
+                                <div className="skeleton-avatar"></div>
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '4px' }}>
+                                    <div className="skeleton-line" style={{ width: '60%' }}></div>
+                                    <div className="skeleton-line" style={{ width: '40%' }}></div>
+                                </div>
+                            </div>
+                        ))}
+                    </>
+                ) : filteredChats.length === 0 ? (
+                    <div className="empty-chat-list" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '16px', minHeight: '300px' }}>
+                        <div className="speech-bubble-icon" style={{ fontSize: '48px', opacity: 0.5, filter: 'drop-shadow(0 0 16px var(--primary-glow))' }}>💬</div>
                         <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>
                             {chatSearch ? 'Чаты не найдены' : 'Список чатов пуст.'}
                         </p>

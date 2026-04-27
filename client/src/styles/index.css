@@ -360,7 +360,7 @@ textarea {
     height: 100dvh;
     width: 100vw;
     overflow: hidden;
-    background: var(--bg-base);
+    background: transparent;
     z-index: 1;
 }
 
@@ -582,6 +582,36 @@ textarea {
 .chat-item.active .chat-avatar img,
 .chat-item:hover .chat-avatar img {
     border-color: var(--primary);
+}
+
+.skeleton-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.skeleton-line {
+    height: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-avatar::after,
+.skeleton-line::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    animation: shimmer 1.5s infinite linear;
 }
 
 .online-dot {
