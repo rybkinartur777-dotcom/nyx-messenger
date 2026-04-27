@@ -182,10 +182,10 @@ const App: React.FC = () => {
     }
 
     return (
-        <div className={`app-container ${theme} ${isBlurred ? 'privacy-blurred' : ''}`}>
+        <div className={`app-container ${theme} ${isBlurred ? 'privacy-blurred' : ''}`} style={{ height: '100dvh', width: '100vw', overflow: 'hidden' }}>
             <StarField />
             
-            <div style={isBlurred ? { filter: 'blur(30px)', transition: 'filter 0.3s' } : { transition: 'filter 0.3s' }}>
+            <div className="app" style={isBlurred ? { filter: 'blur(30px)', transition: 'filter 0.3s' } : { transition: 'filter 0.3s' }}>
                 <Sidebar onAddContact={() => setShowAddContact(true)} />
                 <ChatWindow />
                 <ToastContainer />
