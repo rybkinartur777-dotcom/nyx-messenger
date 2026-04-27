@@ -363,7 +363,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
                                     <div style={{ fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{user.nickname}</div>
-                                    <div title="Копировать ID" style={{ fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => { navigator.clipboard.writeText(user.id); alert('ID скопирован'); }}>{user.id.slice(0, 8)}...</div>
+                                    <div title="Копировать ID" style={{ fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => { navigator.clipboard.writeText(user.id); addToast({ title: 'Скопировано', body: 'ID скопирован в буфер обмена' }); }}>{user.id.slice(0, 8)}...</div>
                                 </div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
