@@ -8,6 +8,7 @@ import { setupSocketHandlers } from './socket/handlers.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import chatRoutes from './routes/chats.js';
+import linkPreviewRoutes from './routes/linkPreview.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -43,6 +44,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/chats', chatRoutes);
+app.use('/api/link-preview', linkPreviewRoutes);
 
 // Serve static files from the client app
 const clientBuildPath = path.join(__dirname, '../../client/dist');

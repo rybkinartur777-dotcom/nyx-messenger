@@ -8,6 +8,7 @@ import { Message } from '../../types';
 
 import AudioPlayer from './AudioPlayer';
 import { EncryptionInfoModal } from './EncryptionInfoModal';
+import MediaGallery from './MediaGallery';
 
 const EMOJI_LIST = [
     '❤️', '👍', '😂', '😮', '😢', '🔥', '💯', '👀',
@@ -41,6 +42,10 @@ export const ChatWindow: React.FC = () => {
     const [isDragOver, setIsDragOver] = useState(false);
     const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
     const [showAutoDeleteMenu, setShowAutoDeleteMenu] = useState(false);
+    const [showGallery, setShowGallery] = useState(false);
+    // Link preview cache: url -> OG data
+    const linkPreviewCache = useRef<Map<string, any>>(new Map());
+    const [linkPreviews, setLinkPreviews] = useState<Record<string, any>>({});
     // Mobile: bottom sheet context menu
     const [bottomSheet, setBottomSheet] = useState<{ message: Message } | null>(null);
     // Self-destruct countdown: messageId -> seconds remaining
@@ -393,6 +398,64 @@ export const ChatWindow: React.FC = () => {
     const isImageUrl = (url: string) => {
         return url.match(/\.(jpeg|jpg|gif|png|webp)$/) != null || url.includes('images.unsplash.com');
     };
+
+    // Extract first URL from text
+    const extractUrl = (text: string): string | null => {
+        const match = text.match(/https?:\/\/[^\s<>"]+/);
+        return match ? match[0] : null;
+    };
+
+    // Fetch OG link preview from server
+    const fetchLinkPreview = useCallback(async (url: string, msgId: string) => {
+        if (linkPreviewCache.current.has(url)) {
+            setLinkPreviews(prev => ({ ...prev, [msgId]: linkPreviewCache.current.get(url) }));
+            return;
+        }
+        try {
+            const serverUrl = API_BASE_URL.replace(/\/$/, '');
+            const res = await fetch(`${serverUrl}/api/link-preview?url=${encodeURIComponent(url)}`);
+            const data = await res.json();
+            if (data.success && data.data) {
+                linkPreviewCache.current.set(url, data.data);
+                setLinkPreviews(prev => ({ ...prev, [msgId]: data.data }));
+            }
+        } catch { /* silent */ }
+    }, []);
+
+    // LinkPreviewCard inline component
+    const LinkPreviewCard: React.FC<{ preview: any; url: string }> = ({ preview, url }) => (
+        <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="link-preview-card"
+            onClick={e => e.stopPropagation()}
+        >
+            {preview.image && (
+                <img
+                    src={preview.image}
+                    alt=""
+                    className="link-preview-image"
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+            )}
+            <div className="link-preview-body">
+                <div className="link-preview-site">
+                    {preview.favicon && (
+                        <img
+                            src={preview.favicon}
+                            alt=""
+                            className="link-preview-favicon"
+                            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                    )}
+                    <span>{preview.siteName || new URL(url).hostname}</span>
+                </div>
+                {preview.title && <div className="link-preview-title">{preview.title}</div>}
+                {preview.description && <div className="link-preview-desc">{preview.description}</div>}
+            </div>
+        </a>
+    );
 
     const handleSendSticker = (sticker: string) => {
         if (!activeChat || !user) return;
@@ -797,6 +860,18 @@ export const ChatWindow: React.FC = () => {
                         >
                             🔍
                         </button>
+                        <button
+                            className={`btn btn-ghost ${showGallery ? 'active' : ''}`}
+                            title="Медиа-галерея"
+                            onClick={(e) => { e.stopPropagation(); setShowGallery(s => !s); }}
+                            style={{ padding: '8px' }}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <polyline points="21 15 16 10 5 21"/>
+                            </svg>
+                        </button>
                         <div
                             className="encryption-badge"
                             style={{ cursor: 'pointer' }}
@@ -1150,13 +1225,24 @@ export const ChatWindow: React.FC = () => {
                                                                     width="100%" height="180"
                                                                     src={`https://www.youtube.com/embed/${getYoutubeId(msg.content)}`}
                                                                     frameBorder="0" allowFullScreen style={{ borderRadius: '8px', marginTop: '8px' }}
-                                                                ></iframe>
+                                                                >
+                                                                </iframe>
                                                             </div>
                                                         )}
-                                                        {/* Link Image Preview */}
-                                                        {!getYoutubeId(msg.content) && msg.content.match(/https?:\/\/\S+/g)?.map(url => isImageUrl(url) && (
-                                                            <img key={url} src={url} alt="Link Preview" style={{ maxWidth: '100%', borderRadius: '8px', marginTop: '8px' }} />
-                                                        ))}
+                                                        {/* OG Link Preview */}
+                                                        {(() => {
+                                                            const ytId = getYoutubeId(msg.content);
+                                                            if (ytId) return null;
+                                                            const url = extractUrl(msg.content);
+                                                            if (!url) return null;
+                                                            if (isImageUrl(url)) return <img src={url} alt="" style={{ maxWidth: '100%', borderRadius: '8px', marginTop: '8px' }} />;
+                                                            // Load preview lazily
+                                                            if (!linkPreviews[msg.id]) {
+                                                                fetchLinkPreview(url, msg.id);
+                                                                return null;
+                                                            }
+                                                            return <LinkPreviewCard preview={linkPreviews[msg.id]} url={url} />;
+                                                        })()}
                                                     </>
                                                 )}
                                             </div>
@@ -1705,6 +1791,15 @@ export const ChatWindow: React.FC = () => {
                     </div>
                 </div>,
                 document.body
+            )}
+
+            {/* Media Gallery */}
+            {showGallery && activeChat && (
+                <MediaGallery
+                    messages={chatMessages}
+                    onClose={() => setShowGallery(false)}
+                    chatName={activeChat.name || 'Чат'}
+                />
             )}
         </>
     );
