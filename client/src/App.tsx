@@ -12,6 +12,7 @@ import { StarField } from './components/StarField';
 import { ToastContainer } from './components/ToastContainer';
 import { setupWebPush } from './socket/pushService';
 import { PinModal } from './components/Auth/PinModal';
+import { CallOverlay } from './components/Chat/CallOverlay';
 
 const App: React.FC = () => {
     const { isAuthenticated, user, setChats, chats, theme, lang, pinCode, isLocked, setLocked, isFakeMode, screenSecurity, addToast } = useStore();
@@ -215,6 +216,7 @@ const App: React.FC = () => {
             )}
 
             <ToastContainer />
+            <CallOverlay />
         </div>
     );
 };

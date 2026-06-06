@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { User, Chat, Message, Contact, ToastData } from '../types';
+import { User, Chat, Message, Contact, ToastData, CallSession } from '../types';
 
 interface AppState {
     // Auth
@@ -78,6 +78,17 @@ interface AppState {
     setChatLock: (chatId: string, password: string | null) => void;
     toggleScreenSecurity: () => void;
     setChatAutoDelete: (chatId: string, seconds: number) => void;
+
+    // Call state
+    activeCall: CallSession | null;
+    localStream: MediaStream | null;
+    remoteStream: MediaStream | null;
+
+    // Call Actions
+    setActiveCall: (call: CallSession | null) => void;
+    setLocalStream: (stream: MediaStream | null) => void;
+    setRemoteStream: (stream: MediaStream | null) => void;
+    resetCallState: () => void;
 }
 
 export const useStore = create<AppState>()(
@@ -108,6 +119,9 @@ export const useStore = create<AppState>()(
             lockedChatIds: {},
             screenSecurity: true, // Enabled by default for premium feel
             autoDeleteTimers: {},
+            activeCall: null,
+            localStream: null,
+            remoteStream: null,
 
             // Actions
             setUser: (user) => set({
@@ -403,6 +417,10 @@ export const useStore = create<AppState>()(
                 }
                 return { autoDeleteTimers: newTimers };
             }),
+            setActiveCall: (activeCall) => set({ activeCall }),
+            setLocalStream: (localStream) => set({ localStream }),
+            setRemoteStream: (remoteStream) => set({ remoteStream }),
+            resetCallState: () => set({ activeCall: null, localStream: null, remoteStream: null }),
         }),
         {
             name: 'nyx-storage',

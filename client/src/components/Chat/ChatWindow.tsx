@@ -5,6 +5,7 @@ import { socketService } from '../../socket/socketService';
 import { API_BASE_URL } from '../../config';
 import { T } from '../../locales';
 import { Message } from '../../types';
+import { callService } from '../../socket/callService';
 
 import AudioPlayer from './AudioPlayer';
 import { EncryptionInfoModal } from './EncryptionInfoModal';
@@ -87,6 +88,24 @@ export const ChatWindow: React.FC = () => {
     // Get contact user id (the other participant)
     const contactUserId = activeChat?.participants.find(p => p !== user?.id);
     const isContactOnline = contactUserId ? onlineUsers.has(contactUserId) : false;
+
+    const isPrivate = activeChat?.type === 'private';
+    const isSelfChat = isPrivate && activeChat?.participants.length === 1 && activeChat?.participants[0] === user?.id;
+    const showCallButtons = isPrivate && !isSelfChat;
+    const peerName = activeChat?.name || 'Unknown';
+    const peerAvatar = activeChat?.avatar;
+
+    const handleStartAudioCall = () => {
+        if (activeChat && contactUserId) {
+            callService.startCall(activeChat.id, contactUserId, peerName, peerAvatar, 'audio');
+        }
+    };
+
+    const handleStartVideoCall = () => {
+        if (activeChat && contactUserId) {
+            callService.startCall(activeChat.id, contactUserId, peerName, peerAvatar, 'video');
+        }
+    };
 
     // Filtered messages for search
     const displayMessages = searchMode && searchQuery.trim()
@@ -876,6 +895,26 @@ export const ChatWindow: React.FC = () => {
                         );
                     })()}
                     <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+                        {showCallButtons && (
+                            <>
+                                <button
+                                    className="btn btn-ghost"
+                                    title="Голосовой звонок"
+                                    onClick={handleStartAudioCall}
+                                    style={{ fontSize: '16px' }}
+                                >
+                                    📞
+                                </button>
+                                <button
+                                    className="btn btn-ghost"
+                                    title="Видеозвонок"
+                                    onClick={handleStartVideoCall}
+                                    style={{ fontSize: '16px' }}
+                                >
+                                    📹
+                                </button>
+                            </>
+                        )}
                         <button
                             className={`btn btn-ghost ${searchMode ? 'active' : ''}`}
                             title="Поиск"

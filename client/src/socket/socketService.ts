@@ -2,6 +2,7 @@ import { io, Socket } from 'socket.io-client';
 import { useStore } from '../store/useStore';
 import { Message } from '../types';
 import { API_BASE_URL } from '../config';
+import { callService } from './callService';
 
 class SocketService {
     private socket: Socket | null = null;
@@ -175,6 +176,23 @@ class SocketService {
         this.socket.on('message:edited', (data: { chatId: string; messageId: string; newContent: string }) => {
             const { editMessage } = useStore.getState();
             editMessage(data.chatId, data.messageId, data.newContent);
+        });
+
+        // WebRTC Calling Listeners
+        this.socket.on('call:incoming', (data: any) => {
+            callService.handleIncomingCall(data);
+        });
+
+        this.socket.on('call:accepted', () => {
+            callService.handleAcceptedCall();
+        });
+
+        this.socket.on('call:signal', (data: any) => {
+            callService.handleSignal(data);
+        });
+
+        this.socket.on('call:ended', () => {
+            callService.endCall();
         });
     }
 

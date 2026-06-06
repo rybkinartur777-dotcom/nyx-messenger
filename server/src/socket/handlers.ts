@@ -328,6 +328,29 @@ export function setupSocketHandlers(io: Server) {
             }
         });
 
+        // WebRTC CALL SIGNALING EVENTS
+        socket.on('call:initiate', (data: { chatId: string; callerId: string; calleeId: string; type: 'audio' | 'video' }) => {
+            io.to(`user:${data.calleeId}`).emit('call:incoming', data);
+        });
+
+        socket.on('call:accept', (data: { chatId: string; callerId: string; calleeId: string }) => {
+            io.to(`user:${data.callerId}`).emit('call:accepted', data);
+        });
+
+        socket.on('call:reject', (data: { chatId: string; callerId: string; calleeId: string }) => {
+            io.to(`user:${data.callerId}`).emit('call:ended', data);
+            io.to(`user:${data.calleeId}`).emit('call:ended', data);
+        });
+
+        socket.on('call:end', (data: { chatId: string; callerId: string; calleeId: string }) => {
+            io.to(`user:${data.callerId}`).emit('call:ended', data);
+            io.to(`user:${data.calleeId}`).emit('call:ended', data);
+        });
+
+        socket.on('call:signal', (data: { chatId: string; senderId: string; receiverId: string; signalData: any }) => {
+            io.to(`user:${data.receiverId}`).emit('call:signal', data);
+        });
+
         // Disconnect
         socket.on('disconnect', () => {
             const userData = onlineUsers[socket.id];

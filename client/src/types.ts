@@ -113,3 +113,14 @@ export interface SocketEvents {
 
 // Online status
 export type OnlineStatus = 'online' | 'offline';
+
+// WebRTC Call types
+export interface CallSession {
+    chatId: string;
+    peerId: string;
+    peerName: string;
+    peerAvatar?: string;
+    direction: 'incoming' | 'outgoing';
+    status: 'ringing' | 'connected' | 'disconnected';
+    type: 'audio' | 'video';
+}
