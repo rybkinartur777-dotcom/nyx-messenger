@@ -55,6 +55,8 @@ export const ChatWindow: React.FC = () => {
     const [selfDestructCountdowns, setSelfDestructCountdowns] = useState<Record<string, number>>({});
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
+    const recognitionRef = useRef<any>(null);
+    const transcriptRef = useRef<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const fileAnyRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -569,6 +571,34 @@ export const ChatWindow: React.FC = () => {
                 setRecordingTime(t => t + 1);
             }, 1000);
 
+            // Initialize SpeechRecognition if supported
+            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                try {
+                    const recognition = new SpeechRecognition();
+                    recognition.continuous = true;
+                    recognition.interimResults = false;
+                    recognition.lang = lang === 'en' ? 'en-US' : lang === 'uk' ? 'uk-UA' : 'ru-RU';
+                    
+                    transcriptRef.current = '';
+                    
+                    recognition.onresult = (event: any) => {
+                        const current = event.resultIndex;
+                        const resultText = event.results[current][0].transcript;
+                        transcriptRef.current += resultText + ' ';
+                    };
+                    
+                    recognition.onerror = (e: any) => {
+                        console.warn('Speech recognition error:', e);
+                    };
+                    
+                    recognitionRef.current = recognition;
+                    recognition.start();
+                } catch (err) {
+                    console.warn('Failed to start SpeechRecognition:', err);
+                }
+            }
+
             mediaRecorder.ondataavailable = (e) => {
                 if (e.data.size > 0) audioChunksRef.current.push(e.data);
             };
@@ -581,7 +611,9 @@ export const ChatWindow: React.FC = () => {
                     reader.onload = () => {
                         const base64 = reader.result as string;
                         if (activeChat && user) {
-                            socketService.sendMessage(activeChat.id, user.id, '[Голосовое сообщение]', 'audio', base64);
+                            const finalTranscript = transcriptRef.current.trim();
+                            const messageContent = finalTranscript || '[Голосовое сообщение]';
+                            socketService.sendMessage(activeChat.id, user.id, messageContent, 'audio', base64);
                         }
                     };
                     reader.readAsDataURL(audioBlob);
@@ -599,6 +631,13 @@ export const ChatWindow: React.FC = () => {
 
     const stopRecording = (send: boolean) => {
         shouldSendRef.current = send;
+        if (recognitionRef.current) {
+            try {
+                recognitionRef.current.stop();
+            } catch (e) {
+                console.warn(e);
+            }
+        }
         mediaRecorderRef.current?.stop();
         setIsRecording(false);
         if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
@@ -1232,7 +1271,13 @@ export const ChatWindow: React.FC = () => {
 
                                         {/* Audio */}
                                         {msg.type === 'audio' && msg.fileUrl && (
-                                            <AudioPlayer src={msg.fileUrl} isOwn={isOwn} />
+                                            <AudioPlayer 
+                                                src={msg.fileUrl} 
+                                                isOwn={isOwn} 
+                                                chatId={msg.chatId}
+                                                messageId={msg.id}
+                                                transcript={msg.content && msg.content !== '[Голосовое сообщение]' ? msg.content : undefined}
+                                            />
                                         )}
 
                                         {/* File */}

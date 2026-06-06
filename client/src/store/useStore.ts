@@ -89,6 +89,7 @@ interface AppState {
     setLocalStream: (stream: MediaStream | null) => void;
     setRemoteStream: (stream: MediaStream | null) => void;
     resetCallState: () => void;
+    updateMessageContent: (chatId: string, messageId: string, content: string) => void;
 }
 
 export const useStore = create<AppState>()(
@@ -325,6 +326,17 @@ export const useStore = create<AppState>()(
                     [chatId]: (state.messages[chatId] || []).map(m =>
                         m.id === messageId
                             ? { ...m, content: newContent, edited: true }
+                            : m
+                    )
+                }
+            })),
+
+            updateMessageContent: (chatId, messageId, content) => set((state) => ({
+                messages: {
+                    ...state.messages,
+                    [chatId]: (state.messages[chatId] || []).map(m =>
+                        m.id === messageId
+                            ? { ...m, content: content }
                             : m
                     )
                 }

@@ -1,8 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
+import { useStore } from '../../store/useStore';
+import { API_BASE_URL } from '../../config';
 
 interface AudioPlayerProps {
     src: string;
     isOwn: boolean;
+    chatId: string;
+    messageId: string;
+    transcript?: string;
 }
 
 // Generate stable waveform bars per-src (so they don't re-randomize on re-render)
@@ -26,7 +31,7 @@ function formatTime(sec: number) {
 // Detect iOS Safari
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 
-export default function AudioPlayer({ src, isOwn }: AudioPlayerProps) {
+export default function AudioPlayer({ src, isOwn, chatId, messageId, transcript }: AudioPlayerProps) {
     const audioRef = useRef<HTMLAudioElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -34,6 +39,10 @@ export default function AudioPlayer({ src, isOwn }: AudioPlayerProps) {
     const [duration, setDuration] = useState(0);
     const [isLoaded, setIsLoaded] = useState(false);
     const [loadError, setLoadError] = useState(false);
+
+    // Speech-to-text states
+    const [showTranscript, setShowTranscript] = useState(false);
+    const [isTranscribing, setIsTranscribing] = useState(false);
 
     const BARS = generateBars(src.slice(-24));
 
@@ -145,75 +154,145 @@ export default function AudioPlayer({ src, isOwn }: AudioPlayerProps) {
         setCurrentTime(audio.currentTime);
     };
 
+    const handleTranscribe = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+
+        if (transcript) {
+            setShowTranscript(!showTranscript);
+            return;
+        }
+
+        setIsTranscribing(true);
+        try {
+            const serverUrl = API_BASE_URL.replace(/\/$/, '');
+            const response = await fetch(`${serverUrl}/api/voice/transcribe`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    messageId,
+                    fileUrl: src
+                })
+            });
+
+            const result = await response.json();
+            if (result.success && result.data.transcript) {
+                // Update local Zustand store so text updates in UI
+                useStore.getState().updateMessageContent(chatId, messageId, result.data.transcript);
+                setShowTranscript(true);
+            } else {
+                useStore.getState().addToast({
+                    title: '⚠️ Расшифровка',
+                    body: 'Не удалось перевести аудиосообщение в текст.'
+                });
+            }
+        } catch (err) {
+            console.error('Transcription error:', err);
+            useStore.getState().addToast({
+                title: '⚠️ Расшифровка',
+                body: 'Ошибка связи с сервером.'
+            });
+        } finally {
+            setIsTranscribing(false);
+        }
+    };
+
     const filledBars = Math.round(progress * BARS.length);
     const accentColor = isOwn ? 'rgba(255,255,255,0.92)' : 'var(--primary, #7c6aff)';
     const dimColor = isOwn ? 'rgba(255,255,255,0.28)' : 'rgba(124,106,255,0.28)';
 
     return (
-        <div className={`tg-audio-player ${isOwn ? 'own' : 'other'}`}>
-            {/* Hidden native audio element — iOS needs playsinline + x-webkit attributes */}
-            <audio
-                ref={audioRef}
-                preload={isIOS ? 'none' : 'metadata'}
-                playsInline
-                // @ts-ignore — webkit non-standard
-                x-webkit-airplay="deny"
-                webkit-playsinline="true"
-                style={{ display: 'none' }}
-            >
-                {/* Provide webm and mp4/aac sources — iOS supports AAC, not webm */}
-                <source src={src} type="audio/webm; codecs=opus" />
-                <source src={src} type="audio/mp4" />
-                <source src={src} />
-            </audio>
-
-            {/* Play / Pause button */}
-            <button
-                className="tg-audio-btn"
-                onClick={togglePlay}
-                style={{ opacity: isLoaded ? 1 : 0.55 }}
-                aria-label={isPlaying ? 'Pause' : 'Play'}
-            >
-                {isPlaying
-                    ? <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
-                        <rect x="5" y="4" width="4" height="16" rx="1.5" />
-                        <rect x="15" y="4" width="4" height="16" rx="1.5" />
-                    </svg>
-                    : <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
-                        <path d="M8 5v14l11-7z" />
-                    </svg>
-                }
-            </button>
-
-            {/* Waveform + time */}
-            <div className="tg-audio-body">
-                <div
-                    className="tg-audio-wave"
-                    onClick={seek}
-                    onTouchEnd={seek}
-                    style={{ cursor: 'pointer', touchAction: 'pan-y' }}
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+            <div className={`tg-audio-player ${isOwn ? 'own' : 'other'}`}>
+                {/* Hidden native audio element */}
+                <audio
+                    ref={audioRef}
+                    preload={isIOS ? 'none' : 'metadata'}
+                    playsInline
+                    // @ts-ignore
+                    x-webkit-airplay="deny"
+                    webkit-playsinline="true"
+                    style={{ display: 'none' }}
                 >
-                    {BARS.map((h, i) => (
-                        <span
-                            key={i}
-                            className="tg-audio-bar"
-                            style={{
-                                height: `${Math.round(h * 30)}px`,
-                                background: i < filledBars ? accentColor : dimColor,
-                                transition: 'background 0.08s',
-                                flexShrink: 0,
-                            }}
-                        />
-                    ))}
+                    <source src={src} type="audio/webm; codecs=opus" />
+                    <source src={src} type="audio/mp4" />
+                    <source src={src} />
+                </audio>
+
+                {/* Play / Pause button */}
+                <button
+                    className="tg-audio-btn"
+                    onClick={togglePlay}
+                    style={{ opacity: isLoaded ? 1 : 0.55 }}
+                    aria-label={isPlaying ? 'Pause' : 'Play'}
+                >
+                    {isPlaying ? (
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                            <rect x="5" y="4" width="4" height="16" rx="1.5" />
+                            <rect x="15" y="4" width="4" height="16" rx="1.5" />
+                        </svg>
+                    ) : (
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                    )}
+                </button>
+
+                {/* Waveform + time */}
+                <div className="tg-audio-body">
+                    <div
+                        className="tg-audio-wave"
+                        onClick={seek}
+                        onTouchEnd={seek}
+                        style={{ cursor: 'pointer', touchAction: 'pan-y' }}
+                    >
+                        {BARS.map((h, i) => (
+                            <span
+                                key={i}
+                                className="tg-audio-bar"
+                                style={{
+                                    height: `${Math.round(h * 30)}px`,
+                                    background: i < filledBars ? accentColor : dimColor,
+                                    transition: 'background 0.08s',
+                                    flexShrink: 0,
+                                }}
+                            />
+                        ))}
+                    </div>
+                    <span className="tg-audio-time">
+                        {currentTime > 0
+                            ? formatTime(currentTime)
+                            : duration > 0
+                                ? formatTime(duration)
+                                : isLoaded && !duration ? '—' : '...'}
+                    </span>
                 </div>
-                <span className="tg-audio-time">
-                    {currentTime > 0
-                        ? formatTime(currentTime)
-                        : duration > 0
-                            ? formatTime(duration)
-                            : isLoaded && !duration ? '—' : '...'}
-                </span>
+
+                {/* Transcription Button */}
+                <button
+                    className={`tg-audio-transcribe-btn ${showTranscript ? 'active' : ''}`}
+                    onClick={handleTranscribe}
+                    disabled={isTranscribing}
+                    title="Показать текст сообщения"
+                >
+                    {isTranscribing ? (
+                        <span className="transcribe-spinner" />
+                    ) : (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                    )}
+                </button>
             </div>
+
+            {/* Transcript text bubble */}
+            {showTranscript && transcript && (
+                <div className="tg-audio-transcript-bubble">
+                    <div className="transcript-header">Текст сообщения</div>
+                    <p className="transcript-text">{transcript}</p>
+                </div>
+            )}
         </div>
     );
 }
