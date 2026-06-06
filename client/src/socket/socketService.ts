@@ -154,6 +154,23 @@ class SocketService {
             }
         });
 
+        // Dynamic new chat notification (group/private)
+        this.socket.on('chat:new', (newChat: any) => {
+            const { chats, setChats } = useStore.getState();
+            if (!chats.find(c => c.id === newChat.id)) {
+                const formattedChat = {
+                    ...newChat,
+                    createdAt: new Date(newChat.createdAt),
+                    lastMessage: newChat.lastMessage ? {
+                        ...newChat.lastMessage,
+                        timestamp: new Date(newChat.lastMessage.timestamp)
+                    } : null
+                };
+                setChats([...chats, formattedChat]);
+                this.joinChat(newChat.id);
+            }
+        });
+
         // Message edited
         this.socket.on('message:edited', (data: { chatId: string; messageId: string; newContent: string }) => {
             const { editMessage } = useStore.getState();

@@ -28,6 +28,8 @@ export const ChatWindow: React.FC = () => {
     const [showEncryptionModal, setShowEncryptionModal] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [isTyping, setIsTyping] = useState(false);
+    const [typingUserNickname, setTypingUserNickname] = useState<string | null>(null);
+    const [showGroupInfo, setShowGroupInfo] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -73,6 +75,13 @@ export const ChatWindow: React.FC = () => {
 
     const chatMessages = activeChat ? messages[activeChat.id] || [] : [];
 
+    const getGroupOnlineInfo = () => {
+        if (!activeChat) return '';
+        const total = activeChat.participants.length;
+        const onlineCount = activeChat.participants.filter(pId => pId === user?.id || onlineUsers.has(pId)).length;
+        return `${total} участников, ${onlineCount} в сети`;
+    };
+
     // Initial load tracking for scroll logic
 
     // Get contact user id (the other participant)
@@ -90,13 +99,20 @@ export const ChatWindow: React.FC = () => {
         const socket = socketService.getSocket();
         if (!socket) return;
 
-        const handleTyping = (data: { chatId: string, userId: string }) => {
+        const handleTyping = (data: { chatId: string, userId: string, nickname?: string }) => {
             if (activeChat && data.chatId === activeChat.id && data.userId !== user?.id) {
-                // If the user hasn't opted into stealth mode, we technically still show typing unless the SENDER is stealth.
-                // But simplified: we just show it. 
+                let name = data.nickname;
+                if (!name && activeChat.participantDetails) {
+                    const participant = activeChat.participantDetails.find(p => p.id === data.userId);
+                    if (participant) name = participant.nickname;
+                }
+                setTypingUserNickname(name || 'Кто-то');
                 setIsTyping(true);
                 if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-                typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 3000);
+                typingTimeoutRef.current = setTimeout(() => {
+                    setIsTyping(false);
+                    setTypingUserNickname(null);
+                }, 3000);
             }
         };
 
@@ -133,6 +149,7 @@ export const ChatWindow: React.FC = () => {
                         id: m.id,
                         chatId: m.chatId || activeChat.id,
                         senderId: m.senderId,
+                        senderName: m.senderName,
                         content: m.encryptedContent,
                         type: m.message_type || 'text',
                         fileUrl: m.fileUrl || m.file_url,
@@ -807,31 +824,38 @@ export const ChatWindow: React.FC = () => {
                     </button>
                     {(() => {
                         const isSelfChat = activeChat.type === 'private' && activeChat.participants.length === 1 && activeChat.participants[0] === user?.id;
+                        const isGroup = activeChat.type === 'group';
                         return (
                             <>
                                 <div className="avatar" style={{ 
                                     width: '44px', height: '44px', overflow: 'hidden', 
                                     padding: activeChat.avatar && !isSelfChat ? 0 : undefined, 
                                     display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                                    ...(isSelfChat ? { background: 'linear-gradient(135deg, #6c5ce7, #5c4ce7)' } : {})
-                                }}>
+                                    cursor: isGroup ? 'pointer' : 'default',
+                                    ...(isSelfChat ? { background: 'linear-gradient(135deg, #6c5ce7, #5c4ce7)' } : {}),
+                                    ...(isGroup ? { background: 'linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%)', boxShadow: '0 0 10px var(--secondary-glow)' } : {})
+                                }} onClick={() => { if (isGroup) setShowGroupInfo(true); }}>
                                     {isSelfChat ? (
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#fff' }}>
                                             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
                                         </svg>
                                     ) : activeChat.avatar ? (
                                         <img src={activeChat.avatar} alt={activeChat.name || 'Chat'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    ) : isGroup ? (
+                                        <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>👥</span>
                                     ) : (
                                         activeChat.name?.[0]?.toUpperCase() || '?'
                                     )}
                                 </div>
-                                <div className="chat-header-info">
+                                <div className="chat-header-info" style={{ cursor: isGroup ? 'pointer' : 'default' }} onClick={() => { if (isGroup) setShowGroupInfo(true); }}>
                                     <div className="chat-header-name">{isSelfChat ? 'Избранное' : (activeChat.name || T[lang].sidebar.unknown)}</div>
                                     <div className={`chat-header-status ${isContactOnline ? 'online' : ''}`}>
                                         {isSelfChat ? (
                                             <span style={{ color: 'var(--text-secondary)' }}>Заметки</span>
                                         ) : isTyping ? (
-                                            <span className="typing-text">{T[lang].status.typing}<span className="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>
+                                            <span className="typing-text">{isGroup ? `${typingUserNickname} ` : ''}{T[lang].status.typing}<span className="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>
+                                        ) : isGroup ? (
+                                            <span>{getGroupOnlineInfo()}</span>
                                         ) : isContactOnline ? (
                                             <span><span className="online-dot"></span> {T[lang].status.online}</span>
                                         ) : (() => {
@@ -1143,7 +1167,7 @@ export const ChatWindow: React.FC = () => {
 
                                         {/* Message author (incoming) */}
                                         {!isOwn && (
-                                            <div className="message-author">{activeChat.name}</div>
+                                            <div className="message-author">{activeChat.type === 'group' ? (msg.senderName || 'Неизвестный') : activeChat.name}</div>
                                         )}
 
                                         {/* Image */}
@@ -1800,6 +1824,69 @@ export const ChatWindow: React.FC = () => {
                     onClose={() => setShowGallery(false)}
                     chatName={activeChat.name || 'Чат'}
                 />
+            )}
+
+            {/* Group Info Modal Portal */}
+            {showGroupInfo && activeChat && ReactDOM.createPortal(
+                <div onClick={() => setShowGroupInfo(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s ease' }}>
+                    <div onClick={e => e.stopPropagation()} style={{ background: 'var(--glass-bg)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '24px', width: '420px', maxWidth: '95vw', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 50px rgba(6,214,245,0.1)', animation: 'slideUp 0.25s ease', overflow: 'hidden' }}>
+                        
+                        {/* Header */}
+                        <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>👥 Информация о группе</h3>
+                            <button onClick={() => setShowGroupInfo(false)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', fontSize: '16px' }}>✕</button>
+                        </div>
+                        
+                        {/* Group info hero */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.01)' }}>
+                            <div style={{ width: 80, height: 80, borderRadius: '24px', background: 'linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '36px', color: '#fff', boxShadow: '0 8px 24px var(--secondary-glow)', marginBottom: '16px', overflow: 'hidden' }}>
+                                {activeChat.avatar ? <img src={activeChat.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '👥'}
+                            </div>
+                            <div style={{ fontSize: '18px', fontWeight: 700, color: '#fff', marginBottom: '4px', textAlign: 'center' }}>{activeChat.name}</div>
+                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{getGroupOnlineInfo()}</div>
+                        </div>
+
+                        {/* Members list */}
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px', fontWeight: 600 }}>Участники</div>
+                            {(activeChat.participantDetails || []).map(member => {
+                                const isMemberOnline = member.id === user?.id || onlineUsers.has(member.id);
+                                const isSelf = member.id === user?.id;
+                                
+                                return (
+                                    <div key={member.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '12px', marginBottom: '6px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                                        <div style={{ position: 'relative' }}>
+                                            <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: '#fff', overflow: 'hidden' }}>
+                                                {member.avatar ? <img src={member.avatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : member.nickname[0].toUpperCase()}
+                                            </div>
+                                            {isMemberOnline && (
+                                                <span style={{ position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, borderRadius: '50%', background: 'var(--success)', border: '2px solid var(--bg-base)', boxShadow: '0 0 8px var(--success-glow)' }}></span>
+                                            )}
+                                        </div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <span style={{ fontSize: '14px', fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                    {member.nickname}
+                                                </span>
+                                                {isSelf && (
+                                                    <span style={{ background: 'rgba(124, 92, 252, 0.15)', color: 'var(--primary-light)', fontSize: '10px', padding: '1px 6px', borderRadius: '6px', fontWeight: 600 }}>Вы</span>
+                                                )}
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                                                <span>{member.id.slice(0, 16)}...</span>
+                                                <button onClick={() => { navigator.clipboard.writeText(member.id); alert('ID скопирован в буфер обмена'); }} style={{ background: 'none', border: 'none', color: 'var(--primary-light)', cursor: 'pointer', padding: '0 4px', fontSize: '10px' }}>📋</button>
+                                            </div>
+                                        </div>
+                                        <div style={{ fontSize: '12px', color: isMemberOnline ? 'var(--success)' : 'var(--text-secondary)' }}>
+                                            {isMemberOnline ? 'в сети' : 'оффлайн'}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>,
+                document.body
             )}
         </>
     );

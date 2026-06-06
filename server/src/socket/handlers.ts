@@ -229,19 +229,31 @@ export function setupSocketHandlers(io: Server) {
         // Delete chat
         socket.on('chat:delete', async (data: { chatId: string }) => {
             const { chatId } = data;
+            const userData = onlineUsers[socket.id];
+            if (!userData) return;
+            const userId = userData.userId;
+
             try {
-                // Delete messages for this chat
-                await run('DELETE FROM messages WHERE chat_id = ?', [chatId]);
-                // Delete chat participants
-                await run('DELETE FROM chat_participants WHERE chat_id = ?', [chatId]);
-                // Delete chat itself
-                await run('DELETE FROM chats WHERE id = ?', [chatId]);
+                const chat = await get('SELECT type FROM chats WHERE id = ?', [chatId]) as { type: string } | null;
+                if (!chat) return;
 
-                // Emit to all users in room that the chat was deleted
-                io.to(`chat:${chatId}`).emit('chat:deleted', { chatId });
+                if (chat.type === 'group') {
+                    // Group: just remove current user from participants
+                    await run('DELETE FROM chat_participants WHERE chat_id = ? AND user_id = ?', [chatId, userId]);
+                    socket.emit('chat:deleted', { chatId });
+                    socket.leave(`chat:${chatId}`);
+                } else {
+                    // Private: delete completely for both
+                    await run('DELETE FROM messages WHERE chat_id = ?', [chatId]);
+                    await run('DELETE FROM chat_participants WHERE chat_id = ?', [chatId]);
+                    await run('DELETE FROM chats WHERE id = ?', [chatId]);
 
-                // Then let everyone leave the room
-                io.in(`chat:${chatId}`).socketsLeave(`chat:${chatId}`);
+                    // Emit to all users in room that the chat was deleted
+                    io.to(`chat:${chatId}`).emit('chat:deleted', { chatId });
+
+                    // Then let everyone leave the room
+                    io.in(`chat:${chatId}`).socketsLeave(`chat:${chatId}`);
+                }
             } catch (err) {
                 console.error('Error deleting chat:', err);
             }
@@ -305,6 +317,15 @@ export function setupSocketHandlers(io: Server) {
         // Leave chat room
         socket.on('chat:leave', (chatId: string) => {
             socket.leave(`chat:${chatId}`);
+        });
+
+        // Create chat (group/private notification)
+        socket.on('chat:create', (data: { chat: any }) => {
+            if (data.chat && data.chat.participants) {
+                data.chat.participants.forEach((pId: string) => {
+                    io.to(`user:${pId}`).emit('chat:new', data.chat);
+                });
+            }
         });
 
         // Disconnect

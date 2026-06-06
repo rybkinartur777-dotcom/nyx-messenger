@@ -125,9 +125,10 @@ router.get('/user/:userId', async (req: Request, res: Response) => {
 
             // Get last message
             const lastMessage = await get(`
-        SELECT * FROM messages 
-        WHERE chat_id = ? 
-        ORDER BY created_at DESC 
+        SELECT m.*, u.nickname as sender_name FROM messages m
+        LEFT JOIN users u ON m.sender_id = u.id
+        WHERE m.chat_id = ? 
+        ORDER BY m.created_at DESC 
         LIMIT 1
       `, [chat.id]) as any;
 
@@ -141,10 +142,16 @@ router.get('/user/:userId', async (req: Request, res: Response) => {
                     ? participants.find((p: any) => p.id !== userId)?.avatar
                     : undefined),
                 participants: participants.map((p: any) => p.id),
+                participantDetails: participants.map((p: any) => ({
+                    id: p.id,
+                    nickname: p.nickname,
+                    avatar: p.avatar
+                })),
                 unreadCount: chat.unread_count || 0,
                 lastMessage: lastMessage ? {
                     id: lastMessage.id,
                     senderId: lastMessage.sender_id,
+                    senderName: lastMessage.sender_name,
                     message_type: lastMessage.message_type,
                     encryptedContent: lastMessage.encrypted_content,
                     file_url: lastMessage.file_url,
@@ -175,17 +182,18 @@ router.get('/:chatId/messages', async (req: Request, res: Response) => {
         const { limit = 50, before } = req.query;
 
         let sqlQuery = `
-      SELECT * FROM messages 
-      WHERE chat_id = ?
+      SELECT m.*, u.nickname as sender_name FROM messages m
+      LEFT JOIN users u ON m.sender_id = u.id
+      WHERE m.chat_id = ?
     `;
         const params: any[] = [chatId];
 
         if (before) {
-            sqlQuery += ` AND created_at < ?`;
+            sqlQuery += ` AND m.created_at < ?`;
             params.push(before);
         }
 
-        sqlQuery += ` ORDER BY created_at DESC LIMIT ?`;
+        sqlQuery += ` ORDER BY m.created_at DESC LIMIT ?`;
         params.push(Number(limit));
 
         const messages = await query(sqlQuery, params) as any[];
@@ -196,6 +204,7 @@ router.get('/:chatId/messages', async (req: Request, res: Response) => {
                 id: m.id,
                 chatId: m.chat_id,
                 senderId: m.sender_id,
+                senderName: m.sender_name,
                 message_type: m.message_type,
                 encryptedContent: m.encrypted_content,
                 file_url: m.file_url,

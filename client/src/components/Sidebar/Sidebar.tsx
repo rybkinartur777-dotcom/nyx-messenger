@@ -269,7 +269,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                 <div className="avatar-wrapper">
                                     <div className="avatar" style={{
                                         ...(chat.avatar && !isSelfChat ? { padding: 0, overflow: 'hidden' } : {}),
-                                        ...(isSelfChat ? { background: 'linear-gradient(135deg, #6c5ce7, #5c4ce7)' } : {})
+                                        ...(isSelfChat ? { background: 'linear-gradient(135deg, #6c5ce7, #5c4ce7)' } : {}),
+                                        ...(chat.type === 'group' ? { background: 'linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%)', boxShadow: '0 0 10px var(--secondary-glow)' } : {})
                                     }}>
                                         {isSelfChat ? (
                                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#fff' }}>
@@ -277,6 +278,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                             </svg>
                                         ) : chat.avatar ? (
                                             <img src={chat.avatar} alt={chat.name || 'Chat'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : chat.type === 'group' ? (
+                                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>👥</span>
                                         ) : (
                                             getAvatarLetter(chat)
                                         )}
@@ -344,11 +347,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                     <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.05)', margin: '4px 0' }} />
                     <button className="context-menu-item danger" onClick={() => {
                         setChatContextMenu(null);
-                        if (window.confirm(`Удалить чат с ${chatContextMenu.chat.name}?`)) {
+                        const isGrp = chatContextMenu.chat.type === 'group';
+                        const confirmMsg = isGrp ? 'Выйти из этой группы?' : `Удалить чат с ${chatContextMenu.chat.name}?`;
+                        if (window.confirm(confirmMsg)) {
                             socketService.deleteChat(chatContextMenu.chat.id);
                         }
                     }}>
-                        Удалить чат
+                        {chatContextMenu.chat.type === 'group' ? 'Выйти из группы' : 'Удалить чат'}
                     </button>
                 </div>
             )}
@@ -429,7 +434,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                     <div onClick={() => setChatBottomSheet(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9998 }} />
                     <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#1a1a1a', borderTop: '1px solid rgba(255,255,255,0.1)', borderRadius: '24px 24px 0 0', zIndex: 9999, padding: '20px' }}>
                         <div style={{ height: '4px', width: '40px', background: 'rgba(255,255,255,0.2)', borderRadius: '2px', margin: '0 auto 20px' }} />
-                        <button onClick={() => { socketService.deleteChat(chatBottomSheet.chat.id); setChatBottomSheet(null); }} style={{ width: '100%', padding: '15px', color: '#ff4757', background: 'rgba(255,71,87,0.1)', border: 'none', borderRadius: '12px', textAlign: 'center', fontSize: '16px', fontWeight: 600 }}>Удалить чат</button>
+                        <button onClick={() => { socketService.deleteChat(chatBottomSheet.chat.id); setChatBottomSheet(null); }} style={{ width: '100%', padding: '15px', color: '#ff4757', background: 'rgba(255,71,87,0.1)', border: 'none', borderRadius: '12px', textAlign: 'center', fontSize: '16px', fontWeight: 600 }}>
+                            {chatBottomSheet.chat.type === 'group' ? 'Выйти из группы' : 'Удалить чат'}
+                        </button>
                         <button onClick={() => setChatBottomSheet(null)} style={{ width: '100%', padding: '15px', background: 'none', border: 'none', color: 'var(--text-secondary)', textAlign: 'center', fontSize: '16px', marginTop: '10px' }}>Отмена</button>
                     </div>
                 </>

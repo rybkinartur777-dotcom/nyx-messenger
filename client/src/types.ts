@@ -24,6 +24,7 @@ export interface Message {
     id: string;
     chatId: string;
     senderId: string;
+    senderName?: string;
     content: string;
     type: 'text' | 'image' | 'audio' | 'file' | 'sticker' | 'video';
     fileUrl?: string;
@@ -68,6 +69,7 @@ export interface Chat {
     id: string;
     type: 'private' | 'group';
     participants: string[];
+    participantDetails?: { id: string; nickname: string; avatar?: string }[];
     name?: string;
     avatar?: string;
     lastMessage?: Message;
