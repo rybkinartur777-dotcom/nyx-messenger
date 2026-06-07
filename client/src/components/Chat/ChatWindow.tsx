@@ -23,7 +23,7 @@ export const ChatWindow: React.FC = () => {
     const {
         activeChat, user, messages, chats, setMessages, markMessagesAsRead, onlineUsers,
         pinMessage, unpinMessage, pinnedMessages, lang, deleteMessageLocal, toggleSidebar,
-        stealthMode, setActiveChat, getLastSeen, addToast, setChatAutoDelete, autoDeleteTimers
+        stealthMode, setActiveChat, getLastSeen, addToast
     } = useStore();
     const [inputValue, setInputValue] = useState('');
     const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
@@ -48,7 +48,6 @@ export const ChatWindow: React.FC = () => {
     const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
     const [showAutoDeleteMenu, setShowAutoDeleteMenu] = useState(false);
     const [showGallery, setShowGallery] = useState(false);
-    const [showHeaderMenu, setShowHeaderMenu] = useState(false);
     // Link preview cache: url -> OG data
     const linkPreviewCache = useRef<Map<string, any>>(new Map());
     const [linkPreviews, setLinkPreviews] = useState<Record<string, any>>({});
@@ -415,7 +414,7 @@ export const ChatWindow: React.FC = () => {
             setTimeout(() => {
                 setBurningIds(prev => { const n = new Set(prev); n.add(data.messageId); return n; });
                 setTimeout(() => {
-                    deleteMessageLocal(data.messageId);
+                    useStore.getState().deleteMessageLocal(data.messageId);
                     setBurningIds(prev => { const n = new Set(prev); n.delete(data.messageId); return n; });
                 }, 1500); // Wait for burn animation
             }, data.delay);
@@ -843,7 +842,7 @@ export const ChatWindow: React.FC = () => {
         <>
             <div
                 className="main-chat"
-                onClick={() => { setContextMenu(null); setEmojiPickerFor(null); setEmojiPickerPos(null); setShowStickers(false); setShowHeaderMenu(false); }}
+                onClick={() => { setContextMenu(null); setEmojiPickerFor(null); setEmojiPickerPos(null); setShowStickers(false); }}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
@@ -943,56 +942,55 @@ export const ChatWindow: React.FC = () => {
                             </>
                         );
                     })()}
-                    <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px', position: 'relative' }}>
-                        {/* ── Desktop actions (all inline) ── */}
-                        <div className="chat-header-desktop-actions">
-                            {showCallButtons && (
-                                <>
-                                    <button
-                                        className="btn btn-ghost"
-                                        title="Голосовой звонок"
-                                        onClick={handleStartAudioCall}
-                                        style={{ fontSize: '16px' }}
-                                    >
-                                        📞
-                                    </button>
-                                    <button
-                                        className="btn btn-ghost"
-                                        title="Видеозвонок"
-                                        onClick={handleStartVideoCall}
-                                        style={{ fontSize: '16px' }}
-                                    >
-                                        📹
-                                    </button>
-                                </>
-                            )}
-                            <button
-                                className={`btn btn-ghost ${searchMode ? 'active' : ''}`}
-                                title="Поиск"
-                                onClick={(e) => { e.stopPropagation(); setSearchMode(s => !s); setSearchQuery(''); }}
-                                style={{ fontSize: '16px' }}
-                            >
-                                🔍
-                            </button>
-                            <button
-                                className={`btn btn-ghost ${showGallery ? 'active' : ''}`}
-                                title="Медиа-галерея"
-                                onClick={(e) => { e.stopPropagation(); setShowGallery(s => !s); }}
-                                style={{ padding: '8px' }}
-                            >
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                                    <circle cx="8.5" cy="8.5" r="1.5"/>
-                                    <polyline points="21 15 16 10 5 21"/>
-                                </svg>
-                            </button>
-                            <div
-                                className="encryption-badge"
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => setShowEncryptionModal(true)}
-                            >
-                                🔐 E2E
-                            </div>
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+                        {showCallButtons && (
+                            <>
+                                <button
+                                    className="btn btn-ghost"
+                                    title="Голосовой звонок"
+                                    onClick={handleStartAudioCall}
+                                    style={{ fontSize: '16px' }}
+                                >
+                                    📞
+                                </button>
+                                <button
+                                    className="btn btn-ghost"
+                                    title="Видеозвонок"
+                                    onClick={handleStartVideoCall}
+                                    style={{ fontSize: '16px' }}
+                                >
+                                    📹
+                                </button>
+                            </>
+                        )}
+                        <button
+                            className={`btn btn-ghost ${searchMode ? 'active' : ''}`}
+                            title="Поиск"
+                            onClick={(e) => { e.stopPropagation(); setSearchMode(s => !s); setSearchQuery(''); }}
+                            style={{ fontSize: '16px' }}
+                        >
+                            🔍
+                        </button>
+                        <button
+                            className={`btn btn-ghost ${showGallery ? 'active' : ''}`}
+                            title="Медиа-галерея"
+                            onClick={(e) => { e.stopPropagation(); setShowGallery(s => !s); }}
+                            style={{ padding: '8px' }}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <polyline points="21 15 16 10 5 21"/>
+                            </svg>
+                        </button>
+                        <div
+                            className="encryption-badge"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => setShowEncryptionModal(true)}
+                        >
+                            🔐 E2E
+                        </div>
+                        <div style={{ position: 'relative' }}>
                             <button
                                 className={`btn btn-ghost ${autoDeleteTimers[activeChat.id] ? 'active' : ''}`}
                                 title="Таймер авто-удаления"
@@ -1004,99 +1002,38 @@ export const ChatWindow: React.FC = () => {
                                     <span style={{ position: 'absolute', top: '2px', right: '2px', width: '6px', height: '6px', background: 'var(--accent-primary)', borderRadius: '50%' }} />
                                 )}
                             </button>
-                        </div>
-
-                        {/* ── Mobile actions (Voice call + Dropdown) ── */}
-                        <div className="chat-header-mobile-actions">
-                            {showCallButtons && (
-                                <button
-                                    className="btn btn-ghost"
-                                    title="Голосовой звонок"
-                                    onClick={handleStartAudioCall}
-                                    style={{ fontSize: '16px' }}
-                                >
-                                    📞
-                                </button>
-                            )}
-                            <button
-                                className={`btn btn-ghost ${showHeaderMenu ? 'active' : ''}`}
-                                onClick={(e) => { e.stopPropagation(); setShowHeaderMenu(!showHeaderMenu); }}
-                                style={{ fontSize: '18px', padding: '0 8px' }}
-                                title="Еще"
-                            >
-                                ⋮
-                            </button>
-
-                            {showHeaderMenu && (
-                                <div className="header-dropdown-menu" onClick={(e) => e.stopPropagation()}>
-                                    {showCallButtons && (
+                            {showAutoDeleteMenu && (
+                                <div style={{
+                                    position: 'absolute', top: '100%', right: 0, marginTop: '8px',
+                                    background: 'var(--glass-bg)', backdropFilter: 'blur(20px)',
+                                    border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px',
+                                    padding: '8px', zIndex: 1000, width: '180px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
+                                }}>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '4px 8px 8px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '4px' }}>
+                                        Авто-удаление чата через:
+                                    </div>
+                                    {[
+                                        { label: '🔥 Выключено', val: 0 },
+                                        { label: '⏳ 1 час', val: 3600 },
+                                        { label: '⏳ 24 часа', val: 86400 },
+                                        { label: '⏳ 7 дней', val: 604800 },
+                                    ].map(opt => (
                                         <button
-                                            className="header-dropdown-item"
-                                            onClick={() => { setShowHeaderMenu(false); handleStartVideoCall(); }}
+                                            key={opt.val}
+                                            onClick={() => { setChatAutoDelete(activeChat.id, opt.val); setShowAutoDeleteMenu(false); }}
+                                            style={{
+                                                width: '100%', padding: '10px 12px', background: autoDeleteTimers[activeChat.id] === opt.val ? 'rgba(255,255,255,0.05)' : 'none',
+                                                border: 'none', borderRadius: '8px', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', fontSize: '13px',
+                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                            }}
                                         >
-                                            <span>📹</span> {lang === 'ru' ? 'Видеозвонок' : lang === 'uk' ? 'Відеодзвінок' : 'Video Call'}
+                                            {opt.label}
+                                            {autoDeleteTimers[activeChat.id] === opt.val && <span style={{ color: 'var(--accent-primary)' }}>✓</span>}
                                         </button>
-                                    )}
-                                    <button
-                                        className={`header-dropdown-item ${searchMode ? 'active' : ''}`}
-                                        onClick={() => { setShowHeaderMenu(false); setSearchMode(true); setSearchQuery(''); }}
-                                    >
-                                        <span>🔍</span> {lang === 'ru' ? 'Поиск' : lang === 'uk' ? 'Пошук' : 'Search'}
-                                    </button>
-                                    <button
-                                        className={`header-dropdown-item ${showGallery ? 'active' : ''}`}
-                                        onClick={() => { setShowHeaderMenu(false); setShowGallery(!showGallery); }}
-                                    >
-                                        <span>🖼️</span> {lang === 'ru' ? 'Медиа-галерея' : lang === 'uk' ? 'Медіа-галерея' : 'Media Gallery'}
-                                    </button>
-                                    <button
-                                        className="header-dropdown-item"
-                                        onClick={() => { setShowHeaderMenu(false); setShowEncryptionModal(true); }}
-                                    >
-                                        <span>🔐</span> {lang === 'ru' ? 'Шифрование E2E' : lang === 'uk' ? 'Шифрування E2E' : 'Encryption E2E'}
-                                    </button>
-                                    <button
-                                        className={`header-dropdown-item ${autoDeleteTimers[activeChat.id] ? 'active' : ''}`}
-                                        onClick={() => { setShowHeaderMenu(false); setShowAutoDeleteMenu(!showAutoDeleteMenu); }}
-                                    >
-                                        <span>⏱️</span> {lang === 'ru' ? 'Автоудаление' : lang === 'uk' ? 'Автовидалення' : 'Auto-delete timer'}
-                                    </button>
+                                    ))}
                                 </div>
                             )}
                         </div>
-
-                        {/* ── Auto-delete menu (rendered relative to parent actions wrapper) ── */}
-                        {showAutoDeleteMenu && (
-                            <div style={{
-                                position: 'absolute', top: '100%', right: 0, marginTop: '8px',
-                                background: 'var(--glass-bg)', backdropFilter: 'blur(20px)',
-                                border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px',
-                                padding: '8px', zIndex: 1000, width: '180px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
-                            }}>
-                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '4px 8px 8px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '4px' }}>
-                                    Авто-удаление чата через:
-                                </div>
-                                {[
-                                    { label: '🔥 Выключено', val: 0 },
-                                    { label: '⏳ 1 час', val: 3600 },
-                                    { label: '⏳ 24 часа', val: 86400 },
-                                    { label: '⏳ 7 дней', val: 604800 },
-                                ].map(opt => (
-                                    <button
-                                        key={opt.val}
-                                        onClick={() => { setChatAutoDelete(activeChat.id, opt.val); setShowAutoDeleteMenu(false); }}
-                                        style={{
-                                            width: '100%', padding: '10px 12px', background: autoDeleteTimers[activeChat.id] === opt.val ? 'rgba(255,255,255,0.05)' : 'none',
-                                            border: 'none', borderRadius: '8px', color: 'var(--text-primary)', textAlign: 'left', cursor: 'pointer', fontSize: '13px',
-                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                                        }}
-                                    >
-                                        {opt.label}
-                                        {autoDeleteTimers[activeChat.id] === opt.val && <span style={{ color: 'var(--accent-primary)' }}>✓</span>}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
                     </div>
                 </div>
 
