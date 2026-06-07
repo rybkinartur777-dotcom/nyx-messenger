@@ -36,6 +36,7 @@ interface AppState {
     lockedChatIds: Record<string, string>; // chatId -> specific chat password
     screenSecurity: boolean; // Blur app on focus loss and detect screenshots
     autoDeleteTimers: Record<string, number>; // chatId -> seconds of inactivity before deletion (0 means off)
+    particlesEnabled: boolean; // Enable or disable background particle canvas animations
 
     // Actions
     setUser: (user: User | null) => void;
@@ -90,6 +91,7 @@ interface AppState {
     setRemoteStream: (stream: MediaStream | null) => void;
     resetCallState: () => void;
     updateMessageContent: (chatId: string, messageId: string, content: string) => void;
+    toggleParticlesEnabled: () => void;
 }
 
 export const useStore = create<AppState>()(
@@ -123,6 +125,7 @@ export const useStore = create<AppState>()(
             activeCall: null,
             localStream: null,
             remoteStream: null,
+            particlesEnabled: true,
 
             // Actions
             setUser: (user) => set({
@@ -433,6 +436,7 @@ export const useStore = create<AppState>()(
             setLocalStream: (localStream) => set({ localStream }),
             setRemoteStream: (remoteStream) => set({ remoteStream }),
             resetCallState: () => set({ activeCall: null, localStream: null, remoteStream: null }),
+            toggleParticlesEnabled: () => set((state) => ({ particlesEnabled: !state.particlesEnabled })),
         }),
         {
             name: 'nyx-storage',
@@ -452,6 +456,7 @@ export const useStore = create<AppState>()(
                 lockedChatIds: state.lockedChatIds,
                 screenSecurity: state.screenSecurity,
                 autoDeleteTimers: state.autoDeleteTimers,
+                particlesEnabled: state.particlesEnabled,
                 isFakeMode: false // Never persist fake mode being active
             }),
             onRehydrateStorage: () => (state) => {

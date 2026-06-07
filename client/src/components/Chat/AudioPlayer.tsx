@@ -44,7 +44,38 @@ export default function AudioPlayer({ src, isOwn, chatId, messageId, transcript 
     const [showTranscript, setShowTranscript] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
 
+    // Playback Speed states
+    const [playbackSpeed, setPlaybackSpeed] = useState(1);
+    const speedRef = useRef(playbackSpeed);
+    speedRef.current = playbackSpeed;
+
     const BARS = generateBars(src.slice(-24));
+
+    // Dynamic speed synchronization
+    useEffect(() => {
+        if (audioRef.current) {
+            audioRef.current.playbackRate = playbackSpeed;
+        }
+    }, [playbackSpeed]);
+
+    // Global pause sync listener
+    useEffect(() => {
+        const handleGlobalPlay = (e: Event) => {
+            const customEvent = e as CustomEvent<{ messageId: string }>;
+            if (customEvent.detail && customEvent.detail.messageId !== messageId) {
+                const audio = audioRef.current;
+                if (audio && !audio.paused) {
+                    audio.pause();
+                    setIsPlaying(false);
+                }
+            }
+        };
+
+        window.addEventListener('nyx-audio-play', handleGlobalPlay);
+        return () => {
+            window.removeEventListener('nyx-audio-play', handleGlobalPlay);
+        };
+    }, [messageId]);
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -61,6 +92,7 @@ export default function AudioPlayer({ src, isOwn, chatId, messageId, transcript 
                 setDuration(audio.duration);
                 setIsLoaded(true);
             }
+            audio.playbackRate = speedRef.current;
         };
 
         const onTimeUpdate = () => {
@@ -119,6 +151,11 @@ export default function AudioPlayer({ src, isOwn, chatId, messageId, transcript 
                     audio.load();
                     setLoadError(false);
                 }
+                
+                // Dispatch custom event to pause other players before starting playback
+                window.dispatchEvent(new CustomEvent('nyx-audio-play', { detail: { messageId } }));
+
+                audio.playbackRate = playbackSpeed;
                 const playPromise = audio.play();
                 if (playPromise !== undefined) {
                     await playPromise;
@@ -196,6 +233,14 @@ export default function AudioPlayer({ src, isOwn, chatId, messageId, transcript 
         } finally {
             setIsTranscribing(false);
         }
+    };
+
+    const cycleSpeed = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        let nextSpeed = 1;
+        if (playbackSpeed === 1) nextSpeed = 1.5;
+        else if (playbackSpeed === 1.5) nextSpeed = 2;
+        setPlaybackSpeed(nextSpeed);
     };
 
     const filledBars = Math.round(progress * BARS.length);
@@ -283,6 +328,15 @@ export default function AudioPlayer({ src, isOwn, chatId, messageId, transcript 
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                         </svg>
                     )}
+                </button>
+
+                {/* Speed Controls Button */}
+                <button
+                    className="tg-audio-speed-btn"
+                    onClick={cycleSpeed}
+                    title="Скорость воспроизведения"
+                >
+                    {playbackSpeed}x
                 </button>
             </div>
 

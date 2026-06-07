@@ -6,7 +6,7 @@ import { PinModal } from '../Auth/PinModal';
 import { API_BASE_URL } from '../../config';
 
 export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-    const { user, lang, setLanguage, stealthMode, toggleStealthMode, theme, setTheme, pinCode, setPinCode, fakePinCode, setFakePinCode, panicWipe, ghostMode, toggleGhostMode, screenSecurity, toggleScreenSecurity, setUser } = useStore();
+    const { user, lang, setLanguage, stealthMode, toggleStealthMode, theme, setTheme, pinCode, setPinCode, fakePinCode, setFakePinCode, panicWipe, ghostMode, toggleGhostMode, screenSecurity, toggleScreenSecurity, setUser, particlesEnabled, toggleParticlesEnabled } = useStore();
     const [idCopied, setIdCopied] = useState(false);
     const [activeTab, setActiveTab] = useState<'profile' | 'privacy' | 'appearance'>('profile');
     const [showPinSetter, setShowPinSetter] = useState(false);
@@ -694,6 +694,17 @@ export const SettingsModal: React.FC<{ isOpen: boolean; onClose: () => void }> =
                                         </button>
                                     ))}
                                 </div>
+                            </div>
+
+                            {/* Performance/Background Animation toggle */}
+                            <div style={{ marginTop: '8px' }}>
+                                <SettingsRow
+                                    icon="✨"
+                                    title={lang === 'ru' ? 'Анимированный фон' : lang === 'uk' ? 'Анімований фон' : 'Animated Background'}
+                                    description={lang === 'ru' ? 'Включить звезды и метеоры на фоне (отключение ускоряет работу)' : lang === 'uk' ? 'Увімкнути зірки та метеори на тлі (вимкнення прискорює роботу)' : 'Enable background stars and meteors (disabling improves speed)'}
+                                >
+                                    <Toggle checked={particlesEnabled} onChange={toggleParticlesEnabled} />
+                                </SettingsRow>
                             </div>
                         </div>
                     )}

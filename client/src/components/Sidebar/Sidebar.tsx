@@ -359,13 +359,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
             )}
 
             {user && (
-                <div className="sidebar-footer" style={{ padding: '12px 14px', borderTop: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
+                <div className="sidebar-footer" style={{ padding: '14px 16px', borderTop: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
                     {confirmLogout ? (
-                        <div style={{ padding: '10px', background: 'rgba(255,71,87,0.1)', borderRadius: '12px' }}>
-                            <div style={{ fontSize: '13px', textAlign: 'center', marginBottom: '8px' }}>Выйти?</div>
+                        <div style={{ padding: '12px', background: 'rgba(255,71,87,0.12)', borderRadius: '12px', border: '1px solid rgba(255,71,87,0.22)' }}>
+                            <div style={{ fontSize: '14px', fontWeight: 600, textAlign: 'center', marginBottom: '10px', color: 'var(--text-primary)' }}>Выйти?</div>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                                <button onClick={() => setConfirmLogout(false)} style={{ flex: 1, padding: '6px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}>Нет</button>
-                                <button onClick={() => { logout(); window.location.reload(); }} style={{ flex: 1, padding: '6px', borderRadius: '8px', background: 'rgba(255,71,87,0.2)', color: '#ff4757', border: '1px solid rgba(255,71,87,0.3)', cursor: 'pointer', fontWeight: 700 }}>Да</button>
+                                <button onClick={() => setConfirmLogout(false)} style={{ flex: 1, padding: '8px 12px', fontSize: '13px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'all 0.2s', fontWeight: 600 }}>Нет</button>
+                                <button onClick={() => { logout(); window.location.reload(); }} style={{ flex: 1, padding: '8px 12px', fontSize: '13px', borderRadius: '8px', background: 'rgba(255,71,87,0.3)', color: '#ff5263', border: '1px solid rgba(255,71,87,0.45)', cursor: 'pointer', fontWeight: 700, transition: 'all 0.2s' }}>Да</button>
                             </div>
                         </div>
                     ) : (
@@ -375,7 +375,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                     {user.avatar ? <img src={user.avatar} style={{ width: '100%', height: '100%', borderRadius: '12px', objectFit: 'cover' }} /> : user.nickname[0]?.toUpperCase()}
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
-                                    <div style={{ fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{user.nickname}</div>
+                                    <div style={{ fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '110px' }}>{user.nickname}</div>
                                     <div 
                                         title="Копировать ID" 
                                         style={{ 
@@ -395,9 +395,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ onAddContact }) => {
                                     </div>
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                                <button onClick={() => setShowSettings(true)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '34px', height: '34px', borderRadius: '10px', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⚙️</button>
-                                <button onClick={() => setConfirmLogout(true)} style={{ background: 'rgba(255,71,87,0.1)', border: 'none', width: '34px', height: '34px', borderRadius: '10px', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🚪</button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                                <button onClick={() => setShowSettings(true)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '38px', height: '38px', borderRadius: '10px', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} className="footer-action-btn">⚙️</button>
+                                <button onClick={() => setConfirmLogout(true)} style={{ background: 'rgba(255,71,87,0.1)', border: 'none', width: '38px', height: '38px', borderRadius: '10px', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} className="footer-action-btn">🚪</button>
                             </div>
                         </div>
                     )}

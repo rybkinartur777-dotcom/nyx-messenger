@@ -718,6 +718,18 @@ textarea {
     text-overflow: ellipsis;
 }
 
+.footer-action-btn {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.footer-action-btn:hover {
+    transform: scale(1.08);
+}
+
+.footer-action-btn:active {
+    transform: scale(0.94);
+}
+
 .chat-window {
     position: relative;
     flex: 1;

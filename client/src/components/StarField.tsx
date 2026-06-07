@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useStore } from '../store/useStore';
 
 interface Star {
     x: number;
@@ -49,10 +50,13 @@ const PARTICLE_COLORS = [
 ];
 
 export const StarField: React.FC = () => {
+    const particlesEnabled = useStore(state => state.particlesEnabled);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const animRef = useRef<number>(0);
 
     useEffect(() => {
+        if (!particlesEnabled) return;
+
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d')!;
@@ -69,8 +73,8 @@ export const StarField: React.FC = () => {
         resize();
         window.addEventListener('resize', resize);
 
-        // Create stars
-        const STAR_COUNT = 280;
+        // Create stars (optimized: reduced from 280 to 120)
+        const STAR_COUNT = 120;
         const stars: Star[] = Array.from({ length: STAR_COUNT }, () => ({
             x: Math.random() * width,
             y: Math.random() * height,
@@ -84,8 +88,8 @@ export const StarField: React.FC = () => {
             color: STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)],
         }));
 
-        // Particles
-        const MAX_PARTICLES = 40;
+        // Particles (optimized: reduced max particles from 40 to 15)
+        const MAX_PARTICLES = 15;
         const particles: Particle[] = [];
         const spawnParticle = () => {
             particles.push({
@@ -99,7 +103,7 @@ export const StarField: React.FC = () => {
                 color: PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)],
             });
         };
-        for (let i = 0; i < 20; i++) spawnParticle();
+        for (let i = 0; i < 8; i++) spawnParticle();
 
         // Meteors
         const meteors: Meteor[] = [];
@@ -127,35 +131,35 @@ export const StarField: React.FC = () => {
 
             // ── Stars ──
             for (const s of stars) {
-                // Gentle chaotic drift
                 s.angle += (Math.random() - 0.5) * 0.06;
                 s.x += Math.cos(s.angle) * s.speed;
                 s.y += Math.sin(s.angle) * s.speed;
 
-                // Wrap around edges
                 if (s.x < -5) s.x = width + 5;
                 if (s.x > width + 5) s.x = -5;
                 if (s.y < -5) s.y = height + 5;
                 if (s.y > height + 5) s.y = -5;
 
-                // Twinkle
                 s.twinklePhase += s.twinkleSpeed;
                 const alpha = s.maxBrightness * (0.5 + 0.5 * Math.sin(s.twinklePhase));
 
                 ctx.save();
                 ctx.globalAlpha = alpha;
 
-                // Glow for brighter stars
+                // Glow for brighter stars (optimized: no heavy shadowBlur, use double circle draw)
                 if (s.size > 1.4) {
-                    ctx.shadowBlur = s.size * 6;
-                    ctx.shadowColor = s.color;
+                    ctx.fillStyle = s.color;
+                    ctx.globalAlpha = alpha * 0.35;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.size * 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = alpha;
                 }
 
                 ctx.fillStyle = s.color;
                 ctx.beginPath();
 
                 if (s.size > 1.8) {
-                    // Cross/plus shape for big stars
                     const r = s.size;
                     ctx.rect(s.x - r * 0.3, s.y - r, r * 0.6, r * 2);
                     ctx.rect(s.x - r, s.y - r * 0.3, r * 2, r * 0.6);
@@ -167,7 +171,7 @@ export const StarField: React.FC = () => {
             }
 
             // ── Particles (floating glowing orbs) ──
-            if (frame % 8 === 0 && particles.length < MAX_PARTICLES) spawnParticle();
+            if (frame % 15 === 0 && particles.length < MAX_PARTICLES) spawnParticle();
 
             for (let i = particles.length - 1; i >= 0; i--) {
                 const p = particles[i];
@@ -183,9 +187,7 @@ export const StarField: React.FC = () => {
                 const alpha = progress < 0.1 ? progress * 10 : progress > 0.8 ? (1 - progress) * 5 : 1;
 
                 ctx.save();
-                ctx.globalAlpha = alpha * 0.75;
-                ctx.shadowBlur = p.size * 8;
-                ctx.shadowColor = p.color;
+                ctx.globalAlpha = alpha * 0.45;
 
                 const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2);
                 grad.addColorStop(0, p.color);
@@ -199,7 +201,7 @@ export const StarField: React.FC = () => {
 
             // ── Meteors / Shooting stars ──
             const now = Date.now();
-            if (now - lastMeteor > 2500 + Math.random() * 4000 && meteors.length < 4) {
+            if (now - lastMeteor > 4000 + Math.random() * 6000 && meteors.length < 2) {
                 spawnMeteor();
                 lastMeteor = now;
             }
@@ -218,7 +220,6 @@ export const StarField: React.FC = () => {
                 const progress = m.life / m.maxLife;
                 const alpha = progress < 0.2 ? progress * 5 : (1 - progress);
 
-                // Tail
                 const tailX = m.x - m.vx / Math.hypot(m.vx, m.vy) * m.length;
                 const tailY = m.y - m.vy / Math.hypot(m.vx, m.vy) * m.length;
 
@@ -231,18 +232,13 @@ export const StarField: React.FC = () => {
                 ctx.globalAlpha = 1;
                 ctx.strokeStyle = grad;
                 ctx.lineWidth = m.width;
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = 'rgba(162, 155, 254, 0.8)';
                 ctx.lineCap = 'round';
                 ctx.beginPath();
                 ctx.moveTo(tailX, tailY);
                 ctx.lineTo(m.x, m.y);
                 ctx.stroke();
 
-                // Bright head
                 ctx.globalAlpha = alpha;
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = '#fff';
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
                 ctx.arc(m.x, m.y, m.width * 0.8, 0, Math.PI * 2);
@@ -259,7 +255,9 @@ export const StarField: React.FC = () => {
             cancelAnimationFrame(animRef.current);
             window.removeEventListener('resize', resize);
         };
-    }, []);
+    }, [particlesEnabled]);
+
+    if (!particlesEnabled) return null;
 
     return (
         <canvas

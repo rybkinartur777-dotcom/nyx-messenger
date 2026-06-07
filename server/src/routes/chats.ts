@@ -114,53 +114,83 @@ router.get('/user/:userId', async (req: Request, res: Response) => {
       ORDER BY c.created_at DESC
     `, [userId, userId]) as any[];
 
-        const result = await Promise.all(chats.map(async (chat) => {
-            // Get participants
-            const participants = await query(`
-        SELECT u.id, u.nickname, u.avatar
-        FROM users u
-        JOIN chat_participants cp ON u.id = cp.user_id
-        WHERE cp.chat_id = ?
-      `, [chat.id]) as any[];
+        if (chats.length === 0) {
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
 
-            // Get last message
-            const lastMessage = await get(`
-        SELECT m.*, u.nickname as sender_name FROM messages m
-        LEFT JOIN users u ON m.sender_id = u.id
-        WHERE m.chat_id = ? 
-        ORDER BY m.created_at DESC 
-        LIMIT 1
-      `, [chat.id]) as any;
+        const chatIds = chats.map(c => c.id);
+        const placeholders = chatIds.map(() => '?').join(',');
+
+        // 1. Get all participants for all chats in a single query
+        const participantsRows = await query(`
+            SELECT cp.chat_id, u.id, u.nickname, u.avatar
+            FROM users u
+            JOIN chat_participants cp ON u.id = cp.user_id
+            WHERE cp.chat_id IN (${placeholders})
+        `, chatIds) as any[];
+
+        // Group participants by chat_id
+        const participantsMap: Record<string, any[]> = {};
+        participantsRows.forEach(row => {
+            if (!participantsMap[row.chat_id]) {
+                participantsMap[row.chat_id] = [];
+            }
+            participantsMap[row.chat_id].push({
+                id: row.id,
+                nickname: row.nickname,
+                avatar: row.avatar
+            });
+        });
+
+        // 2. Get the last message for all chats in a single query using a window function
+        const lastMessagesRows = await query(`
+            SELECT m.id, m.chat_id, m.sender_id, m.message_type, m.encrypted_content, m.file_url, m.created_at, m.status, u.nickname as sender_name
+            FROM (
+                SELECT *, ROW_NUMBER() OVER (PARTITION BY chat_id ORDER BY created_at DESC) as rn
+                FROM messages
+                WHERE chat_id IN (${placeholders})
+            ) m
+            LEFT JOIN users u ON m.sender_id = u.id
+            WHERE m.rn = 1
+        `, chatIds) as any[];
+
+        // Group last messages by chat_id
+        const lastMessageMap: Record<string, any> = {};
+        lastMessagesRows.forEach(row => {
+            lastMessageMap[row.chat_id] = {
+                id: row.id,
+                senderId: row.sender_id,
+                senderName: row.sender_name,
+                message_type: row.message_type,
+                encryptedContent: row.encrypted_content,
+                file_url: row.file_url,
+                timestamp: row.created_at,
+                status: row.status
+            };
+        });
+
+        const result = chats.map((chat) => {
+            const chatParticipants = participantsMap[chat.id] || [];
 
             return {
                 id: chat.id,
                 type: chat.type,
                 name: chat.name || (chat.type === 'private'
-                    ? participants.find((p: any) => p.id !== userId)?.nickname
+                    ? chatParticipants.find((p: any) => p.id !== userId)?.nickname
                     : undefined),
                 avatar: chat.avatar || (chat.type === 'private'
-                    ? participants.find((p: any) => p.id !== userId)?.avatar
+                    ? chatParticipants.find((p: any) => p.id !== userId)?.avatar
                     : undefined),
-                participants: participants.map((p: any) => p.id),
-                participantDetails: participants.map((p: any) => ({
-                    id: p.id,
-                    nickname: p.nickname,
-                    avatar: p.avatar
-                })),
+                participants: chatParticipants.map((p: any) => p.id),
+                participantDetails: chatParticipants,
                 unreadCount: chat.unread_count || 0,
-                lastMessage: lastMessage ? {
-                    id: lastMessage.id,
-                    senderId: lastMessage.sender_id,
-                    senderName: lastMessage.sender_name,
-                    message_type: lastMessage.message_type,
-                    encryptedContent: lastMessage.encrypted_content,
-                    file_url: lastMessage.file_url,
-                    timestamp: lastMessage.created_at,
-                    status: lastMessage.status
-                } : null,
+                lastMessage: lastMessageMap[chat.id] || null,
                 createdAt: chat.created_at
             };
-        }));
+        });
 
         res.json({
             success: true,

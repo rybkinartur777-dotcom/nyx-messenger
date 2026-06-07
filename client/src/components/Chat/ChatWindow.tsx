@@ -10,6 +10,7 @@ import { callService } from '../../socket/callService';
 import AudioPlayer from './AudioPlayer';
 import { EncryptionInfoModal } from './EncryptionInfoModal';
 import MediaGallery from './MediaGallery';
+import LiveVisualizer from './LiveVisualizer';
 
 const EMOJI_LIST = [
     '❤️', '👍', '😂', '😮', '😢', '🔥', '💯', '👀',
@@ -21,10 +22,11 @@ const STICKERS = ['😂', '❤️', '🔥', '👍', '💀', '🤡', '😭', '�
 export const ChatWindow: React.FC = () => {
     const {
         activeChat, user, messages, chats, setMessages, markMessagesAsRead, onlineUsers,
-        pinMessage, unpinMessage, pinnedMessages, lang, toggleSidebar,
-        stealthMode, setActiveChat, getLastSeen, autoDeleteTimers, setChatAutoDelete
+        pinMessage, unpinMessage, pinnedMessages, lang, deleteMessageLocal, toggleSidebar,
+        stealthMode, setActiveChat, getLastSeen, addToast
     } = useStore();
     const [inputValue, setInputValue] = useState('');
+    const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
     const [showStickers, setShowStickers] = useState(false);
     const [showEncryptionModal, setShowEncryptionModal] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -555,6 +557,7 @@ export const ChatWindow: React.FC = () => {
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            setRecordingStream(stream);
             
             // Fix for iOS Safari using strictly supported formats
             let mimeType = '';
@@ -619,6 +622,7 @@ export const ChatWindow: React.FC = () => {
                     reader.readAsDataURL(audioBlob);
                 }
                 stream.getTracks().forEach(track => track.stop());
+                setRecordingStream(null);
                 if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
             };
 
@@ -626,6 +630,10 @@ export const ChatWindow: React.FC = () => {
             setIsRecording(true);
         } catch (err) {
             console.error('Error recording:', err);
+            addToast({
+                title: lang === 'ru' ? 'Ошибка микрофона' : lang === 'uk' ? 'Помилка мікрофона' : 'Microphone Error',
+                body: lang === 'ru' ? 'Доступ к микрофону заблокирован. Разрешите доступ в настройках браузера.' : lang === 'uk' ? 'Доступ до мікрофона заблоковано. Дозвольте доступ у налаштуваннях браузера.' : 'Microphone access blocked. Please allow access in browser settings.'
+            });
         }
     };
 
@@ -639,6 +647,7 @@ export const ChatWindow: React.FC = () => {
             }
         }
         mediaRecorderRef.current?.stop();
+        setRecordingStream(null);
         setIsRecording(false);
         if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     };
@@ -1623,37 +1632,7 @@ export const ChatWindow: React.FC = () => {
                             <button className="btn btn-icon" style={{ position: 'absolute', top: '-8px', right: '-8px', width: '24px', height: '24px', fontSize: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }} onClick={() => setImagePreview(null)}>✕</button>
                         </div>
                     )}
-                    {isRecording && (
-                        <div className="recording-bar">
-                            {/* Pulsing dot */}
-                            <span className="recording-dot" />
-
-                            {/* Animated live waveform */}
-                            <div className="recording-wave">
-                                {Array.from({ length: 28 }).map((_, i) => (
-                                    <span key={i} style={{ height: `${6 + Math.round(Math.random() * 20)}px` }} />
-                                ))}
-                            </div>
-
-                            {/* Timer */}
-                            <span className="recording-timer">{formatRecordingTime(recordingTime)}</span>
-
-                            {/* Cancel (stop) */}
-                            <button className="rec-btn rec-btn-stop" onClick={() => stopRecording(false)} title="Отменить запись">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                    <rect x="4" y="4" width="16" height="16" rx="3" />
-                                </svg>
-                            </button>
-
-                            {/* Send */}
-                            <button className="rec-btn rec-btn-send" onClick={() => stopRecording(true)} title="Отправить">
-                                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <line x1="22" y1="2" x2="11" y2="13" />
-                                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                                </svg>
-                            </button>
-                        </div>
-                    )}
+                    {/* First duplicate isRecording block deleted */}
 
                     <div className="input-row">
                         <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={handleImageUpload} />
@@ -1733,23 +1712,20 @@ export const ChatWindow: React.FC = () => {
                                 {formatRecordingTime(recordingTime)}
                             </div>
 
-                            <div className="recording-wave">
-                                <div className="wave-bar" style={{ animation: 'waveBar1 0.8s infinite' }}></div>
-                                <div className="wave-bar" style={{ animation: 'waveBar2 0.8s infinite 0.2s' }}></div>
-                                <div className="wave-bar" style={{ animation: 'waveBar3 0.8s infinite 0.4s' }}></div>
-                                <div className="wave-bar" style={{ animation: 'waveBar1 0.8s infinite 0.1s' }}></div>
-                                <div className="wave-bar" style={{ animation: 'waveBar2 0.8s infinite 0.3s' }}></div>
-                                <div className="wave-bar" style={{ animation: 'waveBar4 0.8s infinite 0.5s' }}></div>
-                                <div className="wave-bar" style={{ animation: 'waveBar3 0.8s infinite 0.2s' }}></div>
-                                <div className="wave-bar" style={{ animation: 'waveBar1 0.8s infinite 0.6s' }}></div>
-                            </div>
+                            {/* Live Audio Visualizer connected to microphone */}
+                            <LiveVisualizer stream={recordingStream} />
 
                             <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
-                                <button className="rec-btn rec-btn-stop" onClick={() => stopRecording(false)} title="Отмена">
-                                    ✕
+                                <button className="rec-btn rec-btn-stop" onClick={() => stopRecording(false)} title={lang === 'ru' ? 'Отмена' : lang === 'uk' ? 'Скасувати' : 'Cancel'}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                        <rect x="4" y="4" width="16" height="16" rx="3" />
+                                    </svg>
                                 </button>
-                                <button className="rec-btn rec-btn-send" onClick={() => stopRecording(true)} title="Отправить">
-                                    🚀
+                                <button className="rec-btn rec-btn-send" onClick={() => stopRecording(true)} title={lang === 'ru' ? 'Отправить' : lang === 'uk' ? 'Надіслати' : 'Send'}>
+                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <line x1="22" y1="2" x2="11" y2="13" />
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                                    </svg>
                                 </button>
                             </div>
                         </div>
