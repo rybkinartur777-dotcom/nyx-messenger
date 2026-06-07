@@ -772,16 +772,92 @@ textarea {
     font-size: 15px;
     font-weight: 600;
     color: var(--text-primary);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
 }
 
 .chat-header-status {
     font-size: 12px;
     color: var(--success);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
 }
 
 .chat-header-actions {
     display: flex;
     gap: 4px;
+}
+
+.chat-header-desktop-actions {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.chat-header-mobile-actions {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .chat-header-desktop-actions {
+        display: none !important;
+    }
+    .chat-header-mobile-actions {
+        display: flex !important;
+        gap: 4px;
+        align-items: center;
+    }
+}
+
+.header-dropdown-menu {
+    position: absolute;
+    top: 60px;
+    right: 16px;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 1000;
+    min-width: 170px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    animation: fadeInDropdown 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeInDropdown {
+    from { opacity: 0; transform: translateY(-8px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.header-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease;
+    width: 100%;
+}
+
+.header-dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.header-dropdown-item.active {
+    background: var(--primary-dim, rgba(108, 92, 231, 0.15));
+    color: var(--primary-light, #a29bfe);
 }
 
 .messages-container {
