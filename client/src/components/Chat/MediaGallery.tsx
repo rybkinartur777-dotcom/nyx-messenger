@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Message } from '../../types';
 
 interface MediaGalleryProps {
@@ -47,14 +47,6 @@ const MediaGallery: React.FC<MediaGalleryProps> = ({ messages, onClose, chatName
     const openLightbox = (src: string, index: number) => {
         setLightboxSrc(src);
         setLightboxIndex(index);
-    };
-
-    const formatFileSize = (dataUrl: string): string => {
-        const base64 = dataUrl.split(',')[1] || '';
-        const bytes = Math.ceil((base64.length * 3) / 4);
-        if (bytes < 1024) return `${bytes} B`;
-        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     };
 
     const getFileName = (msg: Message): string => {

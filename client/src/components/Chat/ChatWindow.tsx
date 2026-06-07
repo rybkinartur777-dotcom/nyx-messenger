@@ -23,7 +23,7 @@ export const ChatWindow: React.FC = () => {
     const {
         activeChat, user, messages, chats, setMessages, markMessagesAsRead, onlineUsers,
         pinMessage, unpinMessage, pinnedMessages, lang, deleteMessageLocal, toggleSidebar,
-        stealthMode, setActiveChat, getLastSeen, addToast
+        stealthMode, setActiveChat, getLastSeen, addToast, setChatAutoDelete, autoDeleteTimers
     } = useStore();
     const [inputValue, setInputValue] = useState('');
     const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
@@ -415,7 +415,7 @@ export const ChatWindow: React.FC = () => {
             setTimeout(() => {
                 setBurningIds(prev => { const n = new Set(prev); n.add(data.messageId); return n; });
                 setTimeout(() => {
-                    useStore.getState().deleteMessageLocal(data.messageId);
+                    deleteMessageLocal(data.messageId);
                     setBurningIds(prev => { const n = new Set(prev); n.delete(data.messageId); return n; });
                 }, 1500); // Wait for burn animation
             }, data.delay);
