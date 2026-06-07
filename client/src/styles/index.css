@@ -96,13 +96,10 @@ html {
     height: 100%;
     width: 100%;
     overflow: hidden;
-    /* Fix iOS Safari 100vh bug */
-    height: -webkit-fill-available;
 }
 
 body {
     height: 100%;
-    height: -webkit-fill-available;
     width: 100%;
     overflow: hidden;
     font-family: var(--font-base);
@@ -133,7 +130,6 @@ textarea {
 
 #root {
     height: 100%;
-    height: -webkit-fill-available;
     width: 100%;
     background: #0c0b16;
     background: var(--bg-base);
@@ -367,7 +363,6 @@ textarea {
 .app {
     position: relative;
     display: flex;
-    height: 100dvh;
     height: 100vh;
     width: 100vw;
     overflow: hidden;
