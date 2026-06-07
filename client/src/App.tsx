@@ -183,7 +183,7 @@ const App: React.FC = () => {
     }
 
     return (
-        <div className={`app-container ${theme} ${isBlurred ? 'privacy-blurred' : ''}`} style={{ height: '100dvh', width: '100vw', overflow: 'hidden' }}>
+        <div className={`app-container ${theme} ${isBlurred ? 'privacy-blurred' : ''}`} style={{ height: '100svh', width: '100vw', overflow: 'hidden', background: '#0c0b16', position: 'relative' }}>
             <StarField />
             
             <div className="app" style={isBlurred ? { filter: 'blur(30px)', transition: 'filter 0.3s' } : { transition: 'filter 0.3s' }}>

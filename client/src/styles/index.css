@@ -91,19 +91,26 @@
     user-select: none;
 }
 
-html,
-body {
+html {
+    background: #0c0b16;
     height: 100%;
     width: 100%;
     overflow: hidden;
+    /* Fix iOS Safari 100vh bug */
+    height: -webkit-fill-available;
 }
 
 body {
+    height: 100%;
+    height: -webkit-fill-available;
+    width: 100%;
+    overflow: hidden;
     font-family: var(--font-base);
     font-weight: 400;
     font-size: 15px;
     line-height: 1.5;
     color: var(--text-primary);
+    background: #0c0b16;
     background: var(--bg-base);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -126,7 +133,10 @@ textarea {
 
 #root {
     height: 100%;
+    height: -webkit-fill-available;
     width: 100%;
+    background: #0c0b16;
+    background: var(--bg-base);
 }
 
 @keyframes twinkle {
@@ -358,9 +368,11 @@ textarea {
     position: relative;
     display: flex;
     height: 100dvh;
+    height: 100vh;
     width: 100vw;
     overflow: hidden;
-    background: transparent;
+    background: #0c0b16;
+    background: var(--bg-base);
     z-index: 1;
 }
 
@@ -1851,6 +1863,9 @@ textarea {
     overflow: hidden;
     position: relative;
     z-index: 5;
+    background: #0c0b16;
+    background: var(--bg-base);
+    min-width: 0;
 }
 
 /* ============================================================
