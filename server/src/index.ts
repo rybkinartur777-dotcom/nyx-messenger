@@ -61,7 +61,7 @@ app.get('*', (req, res) => {
 setupSocketHandlers(io);
 
 // Initialize database and start server
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 4000;
 
 initDatabase().then(() => {
     httpServer.listen(PORT, '0.0.0.0', () => {
