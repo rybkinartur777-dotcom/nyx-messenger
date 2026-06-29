@@ -26,7 +26,7 @@ export const ChatWindow: React.FC = () => {
         stealthMode, setActiveChat, getLastSeen, addToast, autoDeleteTimers, setChatAutoDelete
     } = useStore();
 
-    const [inputValue, setInputValue] = useState('');
+    const [hasText, setHasText] = useState(false);
     const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
     const [showStickers, setShowStickers] = useState(false);
     const [showEncryptionModal, setShowEncryptionModal] = useState(false);
@@ -412,26 +412,30 @@ export const ChatWindow: React.FC = () => {
 
         const currentSelfDestruct = isSelfDestruct;
 
+        const textValue = textareaRef.current?.value || '';
+
         if (imagePreview) {
             socketService.sendMessage(
-                activeChat.id, user.id, inputValue.trim() || '[Изображение]', 'image', imagePreview,
+                activeChat.id, user.id, textValue.trim() || '[Изображение]', 'image', imagePreview,
                 replyTo?.id, replyTo?.content, replyTo?.senderId === user.id ? 'Вы' : activeChat.name,
                 currentSelfDestruct
             );
             setImagePreview(null);
-            setInputValue('');
+            if (textareaRef.current) textareaRef.current.value = '';
+            setHasText(false);
             setReplyTo(null);
             setIsSelfDestruct(false);
             return;
         }
 
-        if (!inputValue.trim()) return;
+        if (!textValue.trim()) return;
         socketService.sendMessage(
-            activeChat.id, user.id, inputValue.trim(), 'text', undefined,
+            activeChat.id, user.id, textValue.trim(), 'text', undefined,
             replyTo?.id, replyTo?.content, replyTo?.senderId === user.id ? 'Вы' : activeChat.name,
             currentSelfDestruct
         );
-        setInputValue('');
+        if (textareaRef.current) textareaRef.current.value = '';
+        setHasText(false);
         setReplyTo(null);
         setIsSelfDestruct(false);
     };
@@ -702,7 +706,11 @@ export const ChatWindow: React.FC = () => {
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setInputValue(e.target.value);
+        const val = e.target.value;
+        const hasTextNow = val.trim().length > 0;
+        if (hasText !== hasTextNow) {
+            setHasText(hasTextNow);
+        }
         autoResizeTextarea();
         if (activeChat && user && !stealthMode) {
             socketService.getSocket()?.emit('message:typing', { chatId: activeChat.id, userId: user.id });
@@ -1754,7 +1762,7 @@ export const ChatWindow: React.FC = () => {
                             ref={textareaRef}
                             className="message-input"
                             placeholder={isSelfDestruct ? `🔥 ${T[lang].chat.self_destruct}...` : replyTo ? `${T[lang].chat.reply} ${replyTo.senderId === user?.id ? T[lang].chat.you : activeChat.name}...` : T[lang].chat.type_message}
-                            value={inputValue}
+                            defaultValue=""
                             onChange={handleInputChange}
                             onKeyPress={handleKeyPress}
                             rows={1}
@@ -1791,14 +1799,14 @@ export const ChatWindow: React.FC = () => {
                         <button
                             className="send-btn"
                             onClick={handleSend}
-                            disabled={!inputValue.trim() && !imagePreview}
-                            style={{ display: inputValue || imagePreview ? 'flex' : 'none' }}>
+                            disabled={!hasText && !imagePreview}
+                            style={{ display: hasText || imagePreview ? 'flex' : 'none' }}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                         </button>
 
                         <button
                             className="input-action-btn"
-                            style={{ display: !inputValue.trim() && !imagePreview ? 'flex' : 'none' }}
+                            style={{ display: !hasText && !imagePreview ? 'flex' : 'none' }}
                             onClick={startRecording}
                             title="Голосовое сообщение"
                         >
