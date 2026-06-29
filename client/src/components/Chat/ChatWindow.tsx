@@ -23,8 +23,9 @@ export const ChatWindow: React.FC = () => {
     const {
         activeChat, user, messages, chats, setMessages, markMessagesAsRead, onlineUsers,
         pinMessage, unpinMessage, pinnedMessages, lang, deleteMessageLocal, toggleSidebar,
-        stealthMode, setActiveChat, getLastSeen, addToast
+        stealthMode, setActiveChat, getLastSeen, addToast, autoDeleteTimers, setChatAutoDelete
     } = useStore();
+
     const [inputValue, setInputValue] = useState('');
     const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
     const [showStickers, setShowStickers] = useState(false);
@@ -74,7 +75,12 @@ export const ChatWindow: React.FC = () => {
     const [swipeState, setSwipeState] = useState<{ id: string, offset: number } | null>(null);
     const touchStartXRef = useRef<number | null>(null);
     const touchStartYRef = useRef<number | null>(null);
-    
+    // Scroll-to-bottom button state
+    const [showScrollBtn, setShowScrollBtn] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
     // Bottom sheet for mobile
     const isMobile = () => window.innerWidth <= 768 || ('ontouchstart' in window);
 
@@ -245,6 +251,49 @@ export const ChatWindow: React.FC = () => {
             }
         }
     }, [chatMessages.length, activeChat, user, searchMode]);
+
+    // Scroll tracking for scroll-to-bottom button
+    useEffect(() => {
+        const container = messagesContainerRef.current;
+        if (!container) return;
+        const handleScroll = () => {
+            const { scrollTop, scrollHeight, clientHeight } = container;
+            const distFromBottom = scrollHeight - scrollTop - clientHeight;
+            setShowScrollBtn(distFromBottom > 200);
+            // Count unread below viewport (simple: messages after scroll)
+            if (distFromBottom < 200) setUnreadCount(0);
+        };
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    // New messages while scrolled up — increment counter
+    useEffect(() => {
+        if (showScrollBtn && chatMessages.length > 0) {
+            const lastMsg = chatMessages[chatMessages.length - 1];
+            if (lastMsg?.senderId !== user?.id) {
+                setUnreadCount(c => c + 1);
+            }
+        } else {
+            setUnreadCount(0);
+        }
+    }, [chatMessages.length]);
+
+    const scrollToBottom = () => {
+        const container = messagesContainerRef.current;
+        if (container) {
+            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        }
+        setUnreadCount(0);
+    };
+
+    // Auto-resize textarea
+    const autoResizeTextarea = () => {
+        const el = textareaRef.current;
+        if (!el) return;
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+    };
 
     // Close context menu on outside click
     useEffect(() => {
@@ -654,6 +703,7 @@ export const ChatWindow: React.FC = () => {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setInputValue(e.target.value);
+        autoResizeTextarea();
         if (activeChat && user && !stealthMode) {
             socketService.getSocket()?.emit('message:typing', { chatId: activeChat.id, userId: user.id });
         }
@@ -663,6 +713,12 @@ export const ChatWindow: React.FC = () => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
+            // Reset textarea height after send
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.style.height = 'auto';
+                }
+            }, 0);
         }
     };
 
@@ -1109,7 +1165,7 @@ export const ChatWindow: React.FC = () => {
                 )}
 
                 {/* Messages */}
-                <div className="messages-container">
+                <div className="messages-container" ref={messagesContainerRef}>
                     {displayMessages.length === 0 ? (
                         <div className="empty-state">
                             <div style={{ fontSize: '48px', marginBottom: '16px' }}>
@@ -1442,6 +1498,56 @@ export const ChatWindow: React.FC = () => {
                     <div ref={messagesEndRef} />
                 </div>
 
+                {/* Scroll to bottom button */}
+                {showScrollBtn && (
+                    <button
+                        onClick={scrollToBottom}
+                        style={{
+                            position: 'absolute',
+                            bottom: '90px',
+                            right: '20px',
+                            width: '44px',
+                            height: '44px',
+                            borderRadius: '50%',
+                            background: 'var(--glass-bg)',
+                            backdropFilter: 'blur(12px)',
+                            border: '1px solid rgba(255,255,255,0.15)',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                            transition: 'all 0.2s',
+                            zIndex: 50,
+                            animation: 'fadeIn 0.2s ease'
+                        }}
+                        title="К последнему сообщению"
+                    >
+                        {unreadCount > 0 && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '-6px',
+                                right: '-6px',
+                                background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
+                                color: '#fff',
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                borderRadius: '10px',
+                                padding: '1px 5px',
+                                minWidth: '18px',
+                                textAlign: 'center',
+                                boxShadow: '0 0 8px var(--primary-glow)'
+                            }}>
+                                {unreadCount}
+                            </div>
+                        )}
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                    </button>
+                )}
+
                 {/* Context menu */}
                 {contextMenu && (
                     <div
@@ -1645,6 +1751,7 @@ export const ChatWindow: React.FC = () => {
 
                         {/* Message textarea */}
                         <textarea
+                            ref={textareaRef}
                             className="message-input"
                             placeholder={isSelfDestruct ? `🔥 ${T[lang].chat.self_destruct}...` : replyTo ? `${T[lang].chat.reply} ${replyTo.senderId === user?.id ? T[lang].chat.you : activeChat.name}...` : T[lang].chat.type_message}
                             value={inputValue}

@@ -36,7 +36,8 @@ export default defineConfig({
     })
   ],
   server: {
-    port: 3000
+    port: 3000,
+    host: true  // Expose on local network for mobile access
   }
 })
 

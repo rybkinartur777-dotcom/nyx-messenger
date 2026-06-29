@@ -15,7 +15,7 @@ import { PinModal } from './components/Auth/PinModal';
 import { CallOverlay } from './components/Chat/CallOverlay';
 
 const App: React.FC = () => {
-    const { isAuthenticated, user, setChats, chats, theme, lang, pinCode, isLocked, setLocked, isFakeMode, screenSecurity, addToast } = useStore();
+    const { isAuthenticated, user, setChats, chats, theme, lang, pinCode, isLocked, setLocked, isFakeMode, screenSecurity, addToast, sidebarOpen, toggleSidebar } = useStore();
     const [isLoading, setIsLoading] = useState(true);
     const [showAddContact, setShowAddContact] = useState(false);
     const [isNinjaMode, setIsNinjaMode] = useState(false);
@@ -183,14 +183,26 @@ const App: React.FC = () => {
     }
 
     return (
-        <div className={`app-container ${theme} ${isBlurred ? 'privacy-blurred' : ''}`} style={{ height: '100dvh', width: '100vw', overflow: 'hidden' }}>
+        <div className={`app ${isBlurred ? 'privacy-blurred' : ''}`} style={{ height: '100dvh', width: '100vw', overflow: 'hidden', position: 'relative' }}>
             <StarField />
-            
-            <div className="app" style={isBlurred ? { filter: 'blur(30px)', transition: 'filter 0.3s' } : { transition: 'filter 0.3s' }}>
+
+            <div style={{ display: 'flex', width: '100%', height: '100%', filter: isBlurred ? 'blur(30px)' : 'none', transition: 'filter 0.3s' }}>
                 <Sidebar onAddContact={() => setShowAddContact(true)} />
+                {/* Mobile overlay backdrop when sidebar is open */}
+                <div 
+                    className={`sidebar-overlay ${sidebarOpen ? 'visible' : ''}`} 
+                    onClick={toggleSidebar}
+                    style={{
+                        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 90,
+                        opacity: sidebarOpen ? 1 : 0, pointerEvents: sidebarOpen ? 'auto' : 'none',
+                        transition: 'opacity 0.3s', backdropFilter: 'blur(4px)',
+                        display: window.innerWidth <= 768 ? 'block' : 'none'
+                    }}
+                />
                 <ChatWindow />
-                <ToastContainer />
             </div>
+
+            <ToastContainer />
 
             {showAddContact && (
                 <AddContactModal
@@ -215,7 +227,6 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            <ToastContainer />
             <CallOverlay />
         </div>
     );

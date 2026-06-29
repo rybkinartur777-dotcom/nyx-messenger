@@ -983,8 +983,13 @@ textarea {
     font-size: 14px;
     line-height: 1.5;
     resize: none;
-    max-height: 120px;
+    overflow: hidden;
+    min-height: 24px;
+    max-height: 140px;
     padding: 4px 0;
+    transition: height 0.1s ease;
+    display: block;
+    overflow-y: auto;
 }
 
 .message-input::placeholder {
@@ -1554,7 +1559,7 @@ textarea {
     font-family: var(--font-mono);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
     :root {
         --sidebar-width: 280px;
     }
@@ -1567,10 +1572,13 @@ textarea {
         z-index: 100;
         transform: translateX(-100%);
         transition: transform var(--transition-slow);
+        width: var(--sidebar-width);
+        background: var(--bg-primary); /* Fallback background */
     }
 
     .sidebar.open {
         transform: translateX(0);
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5); /* Add shadow when open */
     }
 
     .auth-card {

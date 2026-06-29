@@ -64,12 +64,13 @@ setupSocketHandlers(io);
 const PORT = process.env.PORT || 4000;
 
 initDatabase().then(() => {
-    httpServer.listen(PORT, () => {
+    httpServer.listen(PORT, '0.0.0.0', () => {
         console.log(`
 ╔═══════════════════════════════════════════╗
 ║                                           ║
 ║   🌙 NYX Server running on port ${PORT}     ║
 ║   🔐 End-to-end encryption enabled        ║
+║   🌐 Accessible on local network          ║
 ║                                           ║
 ╚═══════════════════════════════════════════╝
     `);
